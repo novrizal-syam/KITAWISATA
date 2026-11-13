@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+// Self-hosted (OFL-1.1) so builds never depend on reaching Google Fonts.
+import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
-
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   title: "KITA WISATA",
@@ -19,8 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // The font variable must sit on <html>: the theme's --font-sans is resolved there.
-    <html lang="en" className={jakarta.variable}>
+    <html lang="en">
       <body className="font-sans antialiased">
         {children}
       </body>

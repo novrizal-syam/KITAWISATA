@@ -23,7 +23,7 @@
   --color-blue: #2d4f7c;
   --color-blue-t: #e8eef6;
   --color-grey-t: #efeae8;
-  --font-sans: var(--font-jakarta), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
