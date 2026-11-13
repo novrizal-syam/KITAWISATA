@@ -24,6 +24,10 @@ In development, OTP codes are printed to the server console (`[otp] +62... -> 12
 - `prototype/`: the reference prototypes with photos (see `prototype/README.md`).
 - `docs/decisions.md`: answers to the kickoff questions and how the build applies them.
 
+## Languages
+The app is bilingual (Bahasa Indonesia and English). Add every new string to both `src/i18n/en.ts` and
+`src/i18n/id.ts`; services throw `AppError` with a dictionary key rather than a sentence.
+
 ## Business rules
 Pure, unit-tested functions in `src/domain/`:
 `estimate.ts` (SPPD budget), `approval.ts` (chain up to the Director), `cancellation.ts` (Open Trip fees),
@@ -39,6 +43,7 @@ Pure, unit-tested functions in `src/domain/`:
   options above the policy are locked, prices are rebuilt on the server, and items can be booked in parts.
 - Phase 4a (settings): Finance sets the approval rules; ops creates and edits Open Trips with their terms and
   cancellation fees; brand theme from the logo.
+- Phase 4b (bilingual): Indonesian and English throughout, with a language switch; placeholder-fee badges on demo Open Trips.
 - Next: Finance reports and the monthly invoice.
 
 ## Demo users (seed)

@@ -4,12 +4,13 @@ import { planApprovalChain } from "@/domain/approval";
 import { db } from "@/lib/db";
 import { toIsoDate, todayInJakarta } from "@/domain/dates";
 import { NewSppdForm } from "./form";
+import { getT } from "@/i18n/server";
 
 export default async function NewSppd() {
   const session = await requireRole(PORTAL_ROLES, "/portal/trips/new");
-  const [me, list] = await Promise.all([portalUser(session.user.id), cities()]);
+  const [me, list, { t }] = await Promise.all([portalUser(session.user.id), cities(), getT()]);
   if (!me?.policy || !me.grade) {
-    return <p className="card p-5">Your account has no travel grade yet, so you can&apos;t request business travel. Ask Finance to set it up.</p>;
+    return <p className="card p-5">{t("new.noGrade")}</p>;
   }
   // Show who will approve. The real chain is recomputed on submit, with the final budget.
   const people = await db.user.findMany({ where: { companyId: me.company.id }, select: { id: true, name: true, grade: true, managerId: true, role: true } });
@@ -26,7 +27,7 @@ export default async function NewSppd() {
 
   return (
     <div className="flex max-w-4xl flex-col gap-5">
-      <div><p className="eyebrow">New SPPD request</p><h1 className="text-[28px] font-bold">Where are you going?</h1></div>
+      <div><p className="eyebrow">{t("new.eyebrow")}</p><h1 className="text-[28px] font-bold">{t("new.title")}</h1></div>
       <NewSppdForm
         policy={me.policy}
         cities={list.map((c) => ({ code: c.code, name: c.name, flightFare: c.flightFare, trainFare: c.trainFare }))}

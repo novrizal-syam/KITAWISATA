@@ -2,29 +2,25 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "./actions";
+import { useI18n } from "@/i18n/client";
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
+  const { t } = useI18n();
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, { step: "phone" });
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="callbackUrl" value={callbackUrl ?? ""} />
       {state.step === "phone" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          Mobile number
-          <input name="phone" type="tel" inputMode="tel" autoComplete="tel" required
-            placeholder="0812 3456 7890" className="rounded border px-3 py-2 text-base" />
+        <label className="field">{t("login.phone")}
+          <input name="phone" type="tel" inputMode="tel" autoComplete="tel" required placeholder="0812 3456 7890" className="input" />
         </label>
       ) : (
-        <label className="flex flex-col gap-1 text-sm">
-          Enter the 6-digit code sent to {state.phone}
-          <input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6}
-            required className="rounded border px-3 py-2 text-base tracking-widest" />
+        <label className="field">{t("login.code", { phone: state.phone ?? "" })}
+          <input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required className="input num tracking-[.3em]" />
         </label>
       )}
-      {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
-      <button disabled={pending} className="rounded bg-black px-3 py-2 text-white disabled:opacity-50">
-        {state.step === "phone" ? "Send code" : "Sign in"}
-      </button>
+      {state.error && <p role="alert" className="rounded-lg bg-red-t px-3 py-2 text-[13px] font-semibold text-red-d">{state.error}</p>}
+      <button disabled={pending} className="btn btn-red">{state.step === "phone" ? t("login.sendCode") : t("login.signIn")}</button>
     </form>
   );
 }

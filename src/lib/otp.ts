@@ -16,10 +16,10 @@ export function normalisePhone(input: string): string | null {
   return /^\+628\d{7,11}$/.test(p) ? p : null;
 }
 
-export async function issueOtp(phone: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function issueOtp(phone: string): Promise<{ ok: true } | { ok: false; error: "login.wait" }> {
   const recent = await db.otpCode.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
   if (recent && Date.now() - recent.createdAt.getTime() < RESEND_COOLDOWN_MS) {
-    return { ok: false, error: "Please wait a minute before asking for a new code." };
+    return { ok: false, error: "login.wait" };
   }
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await db.otpCode.create({

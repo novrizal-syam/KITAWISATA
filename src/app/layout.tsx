@@ -3,21 +3,20 @@ import type { Metadata } from "next";
 // so builds never depend on reaching Google Fonts.
 import "@fontsource-variable/open-sans";
 import "./globals.css";
+import { getLocale } from "@/i18n/server";
+import { I18nProvider } from "@/i18n/client";
 
 export const metadata: Metadata = {
-  title: "KITA WISATA",
-  description: "Corporate and leisure travel booking",
+  title: "kitawisata",
+  description: "Corporate and leisure travel booking · Pemesanan perjalanan dinas dan wisata",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="font-sans antialiased">
-        {children}
+        <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>
     </html>
   );

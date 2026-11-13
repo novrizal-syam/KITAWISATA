@@ -20,24 +20,30 @@ export interface CancellationQuote {
   refund: number;
 }
 
-export function validateTiers(tiers: readonly Tier[]): string[] {
-  const errors: string[] = [];
+/** A validation problem; `code` is a dictionary key (see src/i18n/en.ts "tier.*"). */
+export interface TierIssue {
+  code: "tier.days" | "tier.fee" | "tier.minFee" | "tier.duplicate" | "tier.order";
+  params: Record<string, number>;
+}
+
+export function validateTiers(tiers: readonly Tier[]): TierIssue[] {
+  const issues: TierIssue[] = [];
   const days = new Set<number>();
   for (const t of tiers) {
-    if (!Number.isInteger(t.minDaysBefore) || t.minDaysBefore < 0) errors.push(`Invalid days: ${t.minDaysBefore}`);
-    if (!Number.isInteger(t.feePercent) || t.feePercent < 0 || t.feePercent > 100) errors.push(`Invalid fee: ${t.feePercent}%`);
-    if (t.minFee < 0) errors.push(`Invalid minimum fee: ${t.minFee}`);
-    if (days.has(t.minDaysBefore)) errors.push(`Duplicate tier for ${t.minDaysBefore} days`);
+    if (!Number.isInteger(t.minDaysBefore) || t.minDaysBefore < 0) issues.push({ code: "tier.days", params: { v: t.minDaysBefore } });
+    if (!Number.isInteger(t.feePercent) || t.feePercent < 0 || t.feePercent > 100) issues.push({ code: "tier.fee", params: { v: t.feePercent } });
+    if (t.minFee < 0) issues.push({ code: "tier.minFee", params: { v: t.minFee } });
+    if (days.has(t.minDaysBefore)) issues.push({ code: "tier.duplicate", params: { v: t.minDaysBefore } });
     days.add(t.minDaysBefore);
   }
   // Cancelling earlier must never cost more than cancelling later.
   const sorted = [...tiers].sort((a, b) => b.minDaysBefore - a.minDaysBefore);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].minDaysBefore !== sorted[i - 1].minDaysBefore && sorted[i].feePercent < sorted[i - 1].feePercent) {
-      errors.push(`Fee for ${sorted[i].minDaysBefore}+ days is lower than for ${sorted[i - 1].minDaysBefore}+ days`);
+      issues.push({ code: "tier.order", params: { days: sorted[i].minDaysBefore, prev: sorted[i - 1].minDaysBefore } });
     }
   }
-  return errors;
+  return issues;
 }
 
 export function quoteCancellation(

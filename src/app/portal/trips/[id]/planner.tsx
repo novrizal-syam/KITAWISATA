@@ -5,12 +5,14 @@ import { bookAction, type FormState } from "../../actions";
 import type { BookingOption } from "@/domain/booking";
 import { checkBudget } from "@/domain/booking";
 import type { Need } from "@/domain/estimate";
-import { NEED_LABEL, rp } from "@/lib/format";
+import { rp } from "@/lib/format";
+import { useI18n } from "@/i18n/client";
 
 export function Planner({ sppdId, open, options, budget, allowance, alreadyBooked }: {
   sppdId: string; open: Need[]; options: Partial<Record<Need, BookingOption[]>>;
   budget: number; allowance: number; alreadyBooked: number;
 }) {
+  const { t } = useI18n();
   const [state, action, pending] = useActionState<FormState, FormData>(bookAction, {});
   const [tab, setTab] = useState<Need>(open[0]);
   const [cart, setCart] = useState<Partial<Record<Need, BookingOption>>>({});
@@ -26,16 +28,16 @@ export function Planner({ sppdId, open, options, budget, allowance, alreadyBooke
   return (
     <section className="card p-5">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold">Plan your trip</h2>
-        <span className="badge bg-blue-t text-blue">Within your grade limits</span>
+        <h2 className="text-base font-bold">{t("plan.title")}</h2>
+        <span className="badge bg-blue-t text-blue">{t("plan.within")}</span>
       </div>
-      <p className="note mb-4">Choose one option per item. Options above your policy are locked. Everything is charged to the company account. You can book some items now and the rest later.</p>
+      <p className="note mb-4">{t("plan.intro")}</p>
 
       <div role="tablist" className="mb-3 flex gap-1 overflow-x-auto border-b border-line">
         {open.map((n) => (
           <button key={n} role="tab" type="button" aria-selected={tab === n} onClick={() => setTab(n)}
             className={`-mb-px border-b-[3px] px-3.5 py-2.5 font-semibold whitespace-nowrap ${tab === n ? "border-red text-red" : "border-transparent text-muted"}`}>
-            {NEED_LABEL[n]}{cart[n] ? " ✓" : ""}
+            {t(`need.${n}`)}{cart[n] ? " ✓" : ""}
           </button>
         ))}
       </div>
@@ -53,28 +55,28 @@ export function Planner({ sppdId, open, options, budget, allowance, alreadyBooke
               <div className="flex items-center gap-3">
                 <b className={`num ${o.allowed ? "" : "text-muted"}`}>{rp(o.price)}</b>
                 <button type="button" className={`btn btn-sm ${sel ? "btn-green" : "btn-line"}`} disabled={!o.allowed} onClick={() => pick(o)}
-                  aria-label={`${sel ? "Remove" : "Select"} ${o.name}`}>
-                  {!o.allowed ? "Locked" : sel ? "✓ Selected" : "Select"}
+                  aria-label={t(sel ? "plan.removeAria" : "plan.selectAria", { name: o.name })}>
+                  {!o.allowed ? t("plan.locked") : sel ? t("plan.selected") : t("plan.select")}
                 </button>
               </div>
             </li>
           );
         })}
-        {!(options[tab] ?? []).length && <li className="note">Nothing to book for this item on these dates.</li>}
+        {!(options[tab] ?? []).length && <li className="note">{t("plan.nothing")}</li>}
       </ul>
 
       <form action={action} className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <input type="hidden" name="sppdId" value={sppdId} />
         {picked.map((o) => <input key={o.need} type="hidden" name="pick" value={`${o.id}|${o.need}`} />)}
         <div className="num">
-          <div className="note">Selected {picked.length} of {open.length} · daily allowance {rp(allowance)} paid with salary</div>
+          <div className="note">{t("plan.footer", { n: picked.length, total: open.length, allowance: rp(allowance) })}</div>
           <b className="text-lg">{rp(check.selected)}</b>{" "}
           <span className={`note ${check.ok ? "" : "font-semibold text-red-d"}`}>
-            · {check.ok ? `${rp(check.remaining)} left in budget` : `over budget by ${rp(-check.remaining)}`}
+            · {check.ok ? t("plan.left", { amount: rp(check.remaining) }) : t("plan.over", { amount: rp(-check.remaining) })}
           </span>
         </div>
         <button className="btn btn-red" disabled={pending || !picked.length || !check.ok}>
-          {pending ? "Booking…" : picked.length === open.length ? "Confirm and book" : `Book ${picked.length || ""} selected`.replace("  ", " ")}
+          {pending ? t("plan.booking") : picked.length === open.length ? t("plan.confirm") : t("plan.bookSome", { n: picked.length || "" }).replace("  ", " ")}
         </button>
         {state.error && <p role="alert" className="w-full rounded-lg bg-red-t px-3 py-2 text-[13px] font-semibold text-red-d">{state.error}</p>}
       </form>

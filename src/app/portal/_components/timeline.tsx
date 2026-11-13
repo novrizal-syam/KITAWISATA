@@ -1,19 +1,18 @@
 import { currentStep } from "@/domain/approval";
 import { fmtDay } from "@/lib/format";
+import type { Locale, T } from "@/i18n";
 import type { SppdWithDetails } from "@/server/portal";
 
-const KIND = { SUPERIOR: "Approval", FINANCE: "Finance budget check" } as const;
-
-export function ApprovalTimeline({ s }: { s: SppdWithDetails }) {
+export function ApprovalTimeline({ s, t, locale }: { s: SppdWithDetails; t: T; locale: Locale }) {
   const now = s.status === "PENDING_APPROVAL" ? currentStep(s.steps) : null;
   const items: { state: "done" | "now" | "bad" | "later"; title: string; sub: string }[] = [
-    { state: "done", title: `Submitted by ${s.employee.name}`, sub: s.submittedAt ? fmtDay(s.submittedAt) : "" },
+    { state: "done", title: t("tl.submitted", { name: s.employee.name ?? "" }), sub: s.submittedAt ? fmtDay(s.submittedAt, locale) : "" },
     ...s.steps.map((st) => ({
       state: st.decision === "APPROVED" ? "done" as const : st.decision === "REJECTED" ? "bad" as const : now?.id === st.id ? "now" as const : "later" as const,
-      title: `${KIND[st.kind]}: ${st.approver.name}${st.approver.title ? ` (${st.approver.title})` : ""}`,
-      sub: st.decision === "APPROVED" ? `Approved ${fmtDay(st.decidedAt!)}${st.note ? ` · “${st.note}”` : ""}`
-        : st.decision === "REJECTED" ? `Rejected ${fmtDay(st.decidedAt!)} · “${st.note}”`
-        : now?.id === st.id ? "Waiting for a decision" : s.status === "REJECTED" ? "Not needed" : "Next in line",
+      title: `${t(`tl.${st.kind}`)}: ${st.approver.name}${st.approver.title ? ` (${st.approver.title})` : ""}`,
+      sub: st.decision === "APPROVED" ? `${t("tl.approvedOn", { date: fmtDay(st.decidedAt!, locale) })}${st.note ? ` · “${st.note}”` : ""}`
+        : st.decision === "REJECTED" ? `${t("tl.rejectedOn", { date: fmtDay(st.decidedAt!, locale) })} · “${st.note}”`
+        : now?.id === st.id ? t("tl.waiting") : s.status === "REJECTED" ? t("tl.notNeeded") : t("tl.next"),
     })),
   ];
   const dot = { done: "bg-green text-white", now: "border-2 border-amber bg-amber-t text-amber", bad: "bg-red text-white", later: "border-2 border-line2 bg-white text-muted" };
