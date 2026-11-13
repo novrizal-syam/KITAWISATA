@@ -1,0 +1,108 @@
+// KITA WISATA — Phase 1 schema: identity, organisation and auth only.
+// Travel domain models (SPPD, Booking, Approval, PolicyException, WebhookEvent, ...)
+// land in Phase 2, once the open kickoff decisions are confirmed.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TRAVELLER // consumer-site customer
+  EMPLOYEE // business portal: requests travel (e.g. Rina)
+  MANAGER // business portal: approves (e.g. Budi)
+  FINANCE_ADMIN // business portal: budgets and invoices (e.g. Sari)
+  OPS // KITA WISATA internal operations
+}
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  departments Department[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users     User[]
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, name])
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  phone         String      @unique // E.164, e.g. +628123456789
+  email         String?     @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role        @default(TRAVELLER)
+  companyId     String?
+  company       Company?    @relation(fields: [companyId], references: [id])
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  // Approval hierarchy: who approves this user's requests (pending kickoff decision on self-approval).
+  managerId     String?
+  manager       User?       @relation("ReportsTo", fields: [managerId], references: [id])
+  reports       User[]      @relation("ReportsTo")
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+// --- Auth.js adapter tables ---
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
