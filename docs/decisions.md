@@ -20,15 +20,21 @@ Decisions on the open questions from the prototype review. Each one says what th
 | 046 Rina | 5,250,000 | 6,676,000 |
 | (draft) Dimas | 6,950,000 | 7,516,000 |
 
-## 2. Approval goes up the reporting line to the Director
-**Decision:** a request is approved by the requester's superior, then that person's superior, and so on until the Director.
+## 2. Approval rules are a company setting
+**Decision (2026-11-13):** the first answer was "their superior until director". Then: "make the setting for approval".
 
-**Build (implemented in `src/domain/approval.ts`; my reading, please confirm):**
-- The chain follows `User.managerId` upward and ends at the first user with grade Director, inclusive. Example: Rina → Budi Santoso (Sales Manager) → Andi Kurniawan (Managing Director).
-- Nobody approves their own request. A Director has no superior, so a Director's request goes to the Finance budget check (the prototype already does this for SPPD 042).
-- The existing rule that Finance checks requests above Rp 10,000,000 stays, after the chain.
+**Build:** Finance sets the rules on **Settings → Approval rules** (`/portal/settings/approvals`), stored on the company:
+- **Who approves** (`approvalMode`):
+  - Direct superior only.
+  - Every superior up to the Director (default).
+  - Direct superior, and up to the Director when the budget is above an amount (`fullChainOver`, default Rp 5,000,000).
+- **Finance budget check** above an amount (`financeReviewOver`, default Rp 10,000,000).
+
+Rules that hold in every mode (`src/domain/approval.ts`):
+- Nobody approves their own request. A Director's own request goes to the Finance budget check.
+- A finance admin never checks their own request. If they are the only finance admin, the last superior's approval is final.
 - A rejection at any step ends the request.
-- A finance admin never checks their own request. If they are the only finance admin, the Director's approval at the end of their chain is final.
+- Changes apply to requests submitted afterwards; requests already waiting keep their approvers. The page shows who changed the rules last and when.
 
 **Prototype:** not changed. It still shows a single manager step.
 
@@ -38,12 +44,16 @@ Decisions on the open questions from the prototype review. Each one says what th
 **Build (implemented in `prisma/seed.ts`):** the seed takes an anchor date (today in Jakarta, or `DEMO_ANCHOR=YYYY-MM-DD`) and shifts every date by the same amount. Business data treats the prototype's 10 October 2026 as "today"; Open Trip departures are already days from today. SPPD numbers use the Roman month of the shifted approval date, so `046/SPPD/NTI/X/2026` can become `046/SPPD/NTI/XI/2026`. Invoices arrive in a later phase and will follow the same rule.
 **Prototype:** not changed. It is pinned to 10 October 2026.
 
-## 4. Each Open Trip sets its own terms and cancellation fees
-**Decision:** every Open Trip needs its own terms and conditions, including penalties and cancellation fees.
+## 4. Each Open Trip defines its own terms and cancellation fees when it is created
+**Decision (2026-11-13):** every Open Trip has its own terms and penalties. Then: the cancellation fees are defined when the trip is first made, in the Open Trip section.
 
-**Build:** an Open Trip has its own terms text plus a cancellation schedule: a list of tiers, each "cancelled at least N days before departure → fee X% of the trip price" (optionally a fixed minimum in Rupiah). Ops edits these per trip, and a booking keeps a copy of the terms in force when it was made, so later edits don't change existing bookings. The 30% down payment stays as it is. The refund is what was paid minus the fee for the tier the cancellation date falls in.
-**Implemented:** `OpenTrip.terms`, `CancellationTier`, `OpenTripBooking.termsSnapshot`, and `src/domain/cancellation.ts` (the fee is charged on the booking total; the refund is what was paid minus the fee, never below zero; tiers must not get cheaper closer to departure).
-**Open question:** should KITA WISATA offer a default schedule that new trips start from? If so, what are the default tiers? The demo trips use a placeholder schedule (30+ days: 10%, 14+ days: 50%, 7+ days: 75%, later: 100%) and placeholder terms text.
+**Build:**
+- **Where:** kitawisata ops creates and edits trips at **Open Trips** (`/portal/open-trips`).
+- **What the form needs:** the trip details, the terms text, and at least one cancellation tier ("at least N days before departure → X% of the booking total, optional minimum fee in Rupiah"). Cancelling later than the last tier costs 100%.
+- **Validation:** tiers can't get cheaper closer to departure, and the form shows a worked example of fee and refund for each tier.
+- **Existing bookings:** a booking keeps a snapshot of the terms and tiers in force when it was made (`OpenTripBooking.termsSnapshot`), so later edits don't change it. A departure that has bookings can't be removed; close it instead.
+- **Fee rules** (`src/domain/cancellation.ts`): the fee is charged on the booking total; the refund is what was paid minus the fee, never below zero.
+- **Demo trips:** these use placeholder tiers (30+ days: 10%, 14+ days: 50%, 7+ days: 75%) and placeholder terms until ops replaces them with each trip's real terms.
 
 ## 5. Booking in parts (kickoff gap)
 The prototype books every selected item at once and then closes the trip, so an item left out can never be booked.
@@ -51,7 +61,15 @@ The prototype books every selected item at once and then closes the trip, so an 
 item has a booking. The budget check always counts what is already booked and reserves the daily allowance
 (paid with salary). Flight and train options are the prototype's sample carriers and times until a supplier is connected.
 
+## 6. Brand colours and font come from the logo
+**Decision (2026-11-13):** "for color and font use the kita wisata logo theme".
+
+**Build (`src/app/globals.css`):**
+- **Brand colour:** the logo's single colour, red `#C82024`, used for buttons, links, highlights and the keyboard focus ring. The darker shade `#9F1A1D` is for hover and the light tint `#FBE9E9` for highlights.
+- **Font:** Open Sans, the closest open-licence match to the wordmark, self-hosted (OFL-1.1) from `@fontsource-variable/open-sans`.
+- **Unchanged:** the neutral greys and the green, amber and blue status colours stay from the prototype because they carry meaning (approved, waiting, info).
+- **Removed:** the prototype's gold accent, which isn't in the logo.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
-- The colour tokens and font taken from the prototype. The portal uses them now (`src/app/globals.css`); changing them is a one-file edit.
 - Interface language: the portal and login are in English, like the prototypes. Say if they should be in Indonesian.

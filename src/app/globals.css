@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
-/* Brand tokens from prototype/business (pending sign-off, docs/decisions.md). Light theme only, as in the prototype. */
+/* Brand theme from the kitawisata logo (docs/decisions.md §6): the logo red #C82024 with a darker hover shade
+   and a light tint; Open Sans to match the wordmark. Neutrals and status colours come from the prototype.
+   Light theme only, as in the prototype. */
 :root {
   color-scheme: light;
 }
 
 @theme {
-  --color-red: #cc2423;
-  --color-red-d: #9a1b1b;
-  --color-red-t: #fbe9e8;
-  --color-gold: #f2b632;
+  --color-red: #c82024;
+  --color-red-d: #9f1a1d;
+  --color-red-t: #fbe9e9;
   --color-ink: #231f20;
   --color-muted: #6b5f5c;
   --color-line: #e8e2e0;
@@ -23,7 +24,7 @@
   --color-blue: #2d4f7c;
   --color-blue-t: #e8eef6;
   --color-grey-t: #efeae8;
-  --font-sans: "Plus Jakarta Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Open Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
@@ -35,7 +36,7 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-gold);
+  outline: 3px solid var(--color-red);
   outline-offset: 2px;
 }
 

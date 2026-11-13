@@ -15,8 +15,14 @@ export default async function NewSppd() {
   const people = await db.user.findMany({ where: { companyId: me.company.id }, select: { id: true, name: true, grade: true, managerId: true, role: true } });
   const names = new Map(people.map((p) => [p.id, p.name ?? ""]));
   const org = new Map(people.map((p) => [p.id, { id: p.id, grade: p.grade, managerId: p.managerId, isFinanceAdmin: p.role === "FINANCE_ADMIN" }]));
-  let approvers: string[] = [];
-  try { approvers = planApprovalChain(me.id, org, 0, me.company.financeReviewOver).map((s) => names.get(s.approverId)!); } catch { /* shown on submit */ }
+  // Preview both cases; the form picks one as the estimate changes. Finance is added on top when needed.
+  const rules = { approvalMode: me.company.approvalMode, fullChainOver: me.company.fullChainOver, financeReviewOver: me.company.financeReviewOver };
+  const chainNames = (full: boolean) => {
+    try {
+      return planApprovalChain(me.id, org, 0, { ...rules, approvalMode: full ? "FULL_CHAIN" : "DIRECT_SUPERIOR" })
+        .filter((s) => s.kind === "SUPERIOR").map((s) => names.get(s.approverId)!);
+    } catch { return []; }
+  };
 
   return (
     <div className="flex max-w-4xl flex-col gap-5">
@@ -25,8 +31,9 @@ export default async function NewSppd() {
         policy={me.policy}
         cities={list.map((c) => ({ code: c.code, name: c.name, flightFare: c.flightFare, trainFare: c.trainFare }))}
         today={toIsoDate(todayInJakarta())}
-        approvers={approvers}
-        financeOver={me.company.financeReviewOver}
+        directChain={chainNames(false)}
+        fullChain={chainNames(true)}
+        rules={rules}
       />
     </div>
   );

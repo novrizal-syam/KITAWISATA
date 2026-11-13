@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-// Self-hosted (OFL-1.1) so builds never depend on reaching Google Fonts.
-import "@fontsource-variable/plus-jakarta-sans";
+// Open Sans, the closest open-licence match to the kitawisata wordmark. Self-hosted (OFL-1.1)
+// so builds never depend on reaching Google Fonts.
+import "@fontsource-variable/open-sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
