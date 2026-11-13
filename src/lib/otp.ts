@@ -19,7 +19,7 @@ export function normalisePhone(input: string): string | null {
 export async function issueOtp(phone: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const recent = await db.otpCode.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
   if (recent && Date.now() - recent.createdAt.getTime() < RESEND_COOLDOWN_MS) {
-    return { ok: false, error: "Tunggu sebentar sebelum meminta kode baru." };
+    return { ok: false, error: "Please wait a minute before asking for a new code." };
   }
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await db.otpCode.create({

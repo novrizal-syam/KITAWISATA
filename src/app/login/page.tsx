@@ -4,7 +4,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { callbackUrl } = await searchParams;
   return (
     <main className="mx-auto mt-24 w-full max-w-sm px-4">
-      <h1 className="mb-6 text-2xl font-semibold">Masuk ke KITA WISATA</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Sign in to kitawisata</h1>
       <LoginForm callbackUrl={callbackUrl} />
     </main>
   );
