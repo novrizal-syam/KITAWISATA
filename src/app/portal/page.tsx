@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
+import { PORTAL_ROLES, requireRole } from "@/lib/authz";
 
 // Placeholder business-portal home. Role dashboards arrive in later phases.
 export default async function PortalPage() {
-  const session = await auth();
-  if (!session) redirect("/login?callbackUrl=/portal");
+  const session = await requireRole(PORTAL_ROLES, "/portal");
   return (
     <main className="mx-auto mt-16 max-w-2xl px-4">
       <h1 className="text-2xl font-semibold">Portal Bisnis</h1>
