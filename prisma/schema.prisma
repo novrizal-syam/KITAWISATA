@@ -20,20 +20,26 @@ enum Role {
 }
 
 model Company {
-  id                String         @id @default(cuid())
-  name              String
+  id                     String         @id @default(cuid())
+  name                   String
   /// Short code used in SPPD numbers, e.g. "NTI" in 046/SPPD/NTI/X/2026.
-  code              String         @unique
+  code                   String         @unique
+  /// Approval rules, set by Finance on the Approval rules page (docs/decisions.md §2).
+  approvalMode           ApprovalMode   @default(FULL_CHAIN)
+  /// With FULL_CHAIN_ABOVE_AMOUNT: budgets above this go up to the Director; others need only the direct superior.
+  fullChainOver          Int            @default(5000000)
   /// Requests with a budget above this also need a Finance budget check.
-  financeReviewOver Int            @default(10000000)
+  financeReviewOver      Int            @default(10000000)
+  approvalRulesUpdatedAt DateTime?
+  approvalRulesUpdatedBy String?
   /// Last SPPD sequence number issued.
-  sppdSeq           Int            @default(0)
-  departments       Department[]
-  users             User[]
-  policies          TravelPolicy[]
-  sppds             Sppd[]
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  sppdSeq                Int            @default(0)
+  departments            Department[]
+  users                  User[]
+  policies               TravelPolicy[]
+  sppds                  Sppd[]
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 }
 
 model Department {
@@ -75,6 +81,12 @@ model User {
   openTripBookings  OpenTripBooking[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+}
+
+enum ApprovalMode {
+  DIRECT_SUPERIOR // the requester's direct superior only
+  FULL_CHAIN // every superior up to and including the Director
+  FULL_CHAIN_ABOVE_AMOUNT // direct superior; the whole chain when the budget is above fullChainOver
 }
 
 enum Grade {
@@ -260,6 +272,8 @@ model OpenTrip {
   /// Trip-specific terms and conditions shown before payment (docs/decisions.md §4).
   terms         String
   active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @default(now()) @updatedAt
   tiers         CancellationTier[]
   departures    OpenTripDeparture[]
 }

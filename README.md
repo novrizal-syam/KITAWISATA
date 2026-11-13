@@ -4,7 +4,7 @@ Corporate and leisure travel booking platform: consumer site plus business porta
 (Employee, Manager, Finance Admin roles).
 
 ## Stack
-Next.js 15 (App Router) · TypeScript · Tailwind v4 · Prisma 7 + PostgreSQL 17 · Auth.js v5 (phone OTP)
+Next.js 15 (App Router) · TypeScript · Tailwind v4 · Prisma 7 + PostgreSQL 17 · Auth.js v5 (phone OTP) · Open Sans (self-hosted)
 
 ## Getting started
 Requires Node 22, pnpm 10 and Docker.
@@ -37,6 +37,8 @@ Pure, unit-tested functions in `src/domain/`:
   timeline, approvals inbox (approve, reject with a note). The final approval issues the SPPD number.
 - Phase 3b (booking): plan an approved trip inside the grade limits (flights, trains, hotels, cars);
   options above the policy are locked, prices are rebuilt on the server, and items can be booked in parts.
+- Phase 4a (settings): Finance sets the approval rules; ops creates and edits Open Trips with their terms and
+  cancellation fees; brand theme from the logo.
 - Next: Finance reports and the monthly invoice.
 
 ## Demo users (seed)
@@ -52,6 +54,7 @@ Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `p
 | Ayu Lestari | Employee (Supervisor) | Hendra Wijaya | 0811 0000 0006 |
 | Hendra Wijaya | Manager (Operations Manager) | Andi Kurniawan | 0811 0000 0007 |
 | Fajar Nugroho | Employee (IT Engineer) | Hendra Wijaya | 0811 0000 0008 |
+| kitawisata Ops | Ops (back office, no company) | (none) | 0811 0000 0009 |
 
 The seed also loads the prototype's grade policies, cities and hotels, seven SPPDs with their approval
 chains and bookings, and six Open Trips. Dates are shifted so the demo always sits around today; set

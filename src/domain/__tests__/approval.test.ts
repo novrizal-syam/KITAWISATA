@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApprovalRoutingError, currentStep, planApprovalChain, type OrgPerson } from "../approval";
+import { ApprovalRoutingError, DEFAULT_RULES, currentStep, needsFullChain, planApprovalChain, type ApprovalRules, type OrgPerson } from "../approval";
 
 // The prototype's org chart (PT Nusantara Trading Indonesia).
 const org = (overrides: Partial<Record<string, Partial<OrgPerson>>> = {}) => {
@@ -13,7 +13,7 @@ const org = (overrides: Partial<Record<string, Partial<OrgPerson>>> = {}) => {
   ];
   return new Map(base.map((p) => [p.id, { ...p, ...overrides[p.id] }]));
 };
-const T = 10_000_000;
+const T: ApprovalRules = DEFAULT_RULES; // full chain, Finance above Rp 10.000.000
 const ids = (steps: { kind: string; approverId: string }[]) => steps.map((s) => `${s.kind}:${s.approverId}`);
 
 describe("planApprovalChain", () => {
@@ -26,7 +26,7 @@ describe("planApprovalChain", () => {
   });
 
   it("does not add Finance at exactly the threshold", () => {
-    expect(planApprovalChain("rina", org(), T, T)).toHaveLength(2);
+    expect(planApprovalChain("rina", org(), T.financeReviewOver, T)).toHaveLength(2);
   });
 
   it("sends a Director's own request to Finance, never to themselves", () => {
@@ -58,5 +58,33 @@ describe("currentStep", () => {
     expect(currentStep([{ order: 2, decision: "PENDING" }, { order: 1, decision: "APPROVED" }])?.order).toBe(2);
     expect(currentStep([{ order: 1, decision: "APPROVED" }])).toBeNull();
     expect(currentStep([{ order: 1, decision: "REJECTED" }, { order: 2, decision: "PENDING" }])).toBeNull();
+  });
+});
+
+describe("approval rules (set by Finance)", () => {
+  const direct: ApprovalRules = { ...DEFAULT_RULES, approvalMode: "DIRECT_SUPERIOR" };
+  const above: ApprovalRules = { ...DEFAULT_RULES, approvalMode: "FULL_CHAIN_ABOVE_AMOUNT", fullChainOver: 5_000_000 };
+
+  it("direct superior only", () => {
+    expect(ids(planApprovalChain("rina", org(), 6_676_000, direct))).toEqual(["SUPERIOR:budi"]);
+    expect(ids(planApprovalChain("budi", org(), 6_676_000, direct))).toEqual(["SUPERIOR:andi"]);
+  });
+
+  it("direct superior only still adds Finance above its threshold", () => {
+    expect(ids(planApprovalChain("rina", org(), 12_000_000, direct))).toEqual(["SUPERIOR:budi", "FINANCE:sari"]);
+  });
+
+  it("whole chain only above the amount", () => {
+    expect(ids(planApprovalChain("rina", org(), 3_596_000, above))).toEqual(["SUPERIOR:budi"]);
+    expect(ids(planApprovalChain("rina", org(), 5_000_000, above))).toEqual(["SUPERIOR:budi"]); // not above
+    expect(ids(planApprovalChain("rina", org(), 6_676_000, above))).toEqual(["SUPERIOR:budi", "SUPERIOR:andi"]);
+  });
+
+  it("a Director's own request still goes to Finance in every mode", () => {
+    for (const r of [direct, above, DEFAULT_RULES]) expect(ids(planApprovalChain("andi", org(), 1_000_000, r))).toEqual(["FINANCE:sari"]);
+  });
+
+  it("needsFullChain", () => {
+    expect([needsFullChain(DEFAULT_RULES, 1), needsFullChain(direct, 1e9), needsFullChain(above, 5_000_001)]).toEqual([true, false, true]);
   });
 });

@@ -44,7 +44,7 @@ export async function submitSppd(userId: string, input: SubmitInput, today = tod
   const org = new Map<string, OrgPerson>(people.map((p) => [p.id, { id: p.id, grade: p.grade, managerId: p.managerId, isFinanceAdmin: p.role === "FINANCE_ADMIN" }]));
   let chain;
   try {
-    chain = planApprovalChain(user.id, org, total, user.company.financeReviewOver);
+    chain = planApprovalChain(user.id, org, total, user.company);
   } catch (e) {
     if (e instanceof ApprovalRoutingError) throw new SppdError("No approver is set up for you. Ask Finance to check your reporting line.");
     throw e;

@@ -128,7 +128,8 @@ const TRIPS = [
 async function seedCompany() {
   const company = await db.company.upsert({
     where: { id: "demo-company" },
-    update: { name: "PT Nusantara Trading Indonesia", code: "NTI" },
+    // Approval rules go back to the defaults on every seed (decisions §2).
+    update: { name: "PT Nusantara Trading Indonesia", code: "NTI", approvalMode: "FULL_CHAIN", fullChainOver: 5_000_000, financeReviewOver: 10_000_000, approvalRulesUpdatedAt: null, approvalRulesUpdatedBy: null },
     create: { id: "demo-company", name: "PT Nusantara Trading Indonesia", code: "NTI" },
   });
 
@@ -167,7 +168,7 @@ async function seedCompany() {
     const city = CITIES.find((c) => c.code === s.dest)!;
     const start = biz(s.from), end = biz(s.to);
     const budget = estimateBudget(POLICIES[person.grade], city, start, end, s.needs).total;
-    const chain = planApprovalChain(ids.get(s.emp)!, org, budget, company.financeReviewOver);
+    const chain = planApprovalChain(ids.get(s.emp)!, org, budget, company);
     const approvedOn = s.approvedOn ? biz(s.approvedOn) : null;
     const sppd = await db.sppd.create({
       data: {
@@ -205,7 +206,17 @@ async function seedOpenTrips() {
   return TRIPS.length;
 }
 
+async function seedOps() {
+  // kitawisata's own operations team: not part of any client company.
+  await db.user.upsert({
+    where: { phone: "+6281100000009" },
+    update: { name: "kitawisata Ops", role: "OPS", companyId: null },
+    create: { phone: "+6281100000009", name: "kitawisata Ops", role: "OPS" },
+  });
+}
+
 async function main() {
+  await seedOps();
   const { company, sppds, people } = await seedCompany();
   const trips = await seedOpenTrips();
   console.log(`Seeded ${company.name}: ${people} people, ${sppds} SPPDs; ${trips} Open Trips. Dates anchored to ${anchor.toISOString().slice(0, 10)}.`);

@@ -4,12 +4,13 @@ import { useActionState, useMemo, useState } from "react";
 import { submitSppdAction, type FormState } from "../../actions";
 import { estimateBudget, type Need, type PolicyLimits } from "@/domain/estimate";
 import { parseDate } from "@/domain/dates";
+import { needsFullChain, type ApprovalRules } from "@/domain/approval";
 import { LINE_LABEL, NEED_LABEL, rp } from "@/lib/format";
 
 type City = { code: string; name: string; flightFare: number | null; trainFare: number | null };
 
-export function NewSppdForm({ policy, cities, today, approvers, financeOver }: {
-  policy: PolicyLimits; cities: City[]; today: string; approvers: string[]; financeOver: number;
+export function NewSppdForm({ policy, cities, today, directChain, fullChain, rules }: {
+  policy: PolicyLimits; cities: City[]; today: string; directChain: string[]; fullChain: string[]; rules: ApprovalRules;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(submitSppdAction, {});
   const [dest, setDest] = useState(cities[0]?.code ?? "");
@@ -67,8 +68,9 @@ export function NewSppdForm({ policy, cities, today, approvers, financeOver }: {
           </>
         ) : <p className="note">Pick your dates to see the budget.</p>}
         <p className="note">
-          Approval: {approvers.length ? approvers.join(" → ") : "Finance"}
-          {est && est.total > financeOver ? ", then a Finance budget check (above " + rp(financeOver) + ")" : ""}.
+          Approval: {(needsFullChain(rules, est?.total ?? 0) ? fullChain : directChain).join(" → ") || "Finance"}
+          {est && est.total > rules.financeReviewOver ? ", then a Finance budget check (above " + rp(rules.financeReviewOver) + ")" : ""}.
+          {rules.approvalMode === "FULL_CHAIN_ABOVE_AMOUNT" && ` Trips above ${rp(rules.fullChainOver)} go up to the Director.`}
         </p>
         {state.error && <p role="alert" className="rounded-lg bg-red-t px-3 py-2 text-[13px] font-semibold text-red-d">{state.error}</p>}
         <button className="btn btn-red" disabled={pending}>{pending ? "Submitting…" : "Submit for approval"}</button>

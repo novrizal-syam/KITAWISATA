@@ -27,3 +27,7 @@ export const STATUS_BADGE = {
   REJECTED: ["Rejected", "bg-red-t text-red-d"],
   CANCELLED: ["Cancelled", "bg-grey-t text-muted"],
 } as const;
+
+/** "30+ days: 10% · 14+ days: 50% · later: 100%" */
+export const tierSummary = (tiers: { minDaysBefore: number; feePercent: number }[]) =>
+  [...tiers].sort((a, b) => b.minDaysBefore - a.minDaysBefore).map((t) => `${t.minDaysBefore}+ days: ${t.feePercent}%`).join(" · ") + " · later: 100%";
