@@ -70,6 +70,20 @@ item has a booking. The budget check always counts what is already booked and re
 - **Unchanged:** the neutral greys and the green, amber and blue status colours stay from the prototype because they carry meaning (approved, waiting, info).
 - **Removed:** the prototype's gold accent, which isn't in the logo.
 
+## 7. The app is bilingual (Indonesian and English)
+**Decision (2026-11-13):** "make it bilingual".
+
+**Build (`src/i18n`):**
+- **Dictionaries:** two dictionaries, `en.ts` and `id.ts`. TypeScript and a unit test check that both have the same keys and placeholders.
+- **Language choice:** the **ID | EN** switch in the header and on the login page sets a cookie. Without a choice, the browser's language decides, and Indonesian is the default unless English is preferred over it.
+- **Errors:** services and validation raise dictionary keys, not sentences, so error messages appear in the viewer's language.
+- **Formatting:** dates follow the language ("18 Nov 2026" in both, with Indonesian month names where they differ). Rupiah always uses Indonesian grouping (`Rp 1.250.000`).
+- **What isn't translated:** text people type (trip purpose, job titles, Open Trip descriptions) stays as written. Stored booking descriptions are kept in English so records read the same for everyone.
+
+## 8. Ops enter the real Open Trip fees
+**Decision (2026-11-13):** ops enters each trip's real terms and cancellation fees in the Open Trip form.
+
+**Build:** each seeded demo trip carries a **"Placeholder fees, review"** badge on the Open Trips list until ops saves it through the form (`OpenTrip.feesReviewed`). Re-running the seed resets the demo trips to placeholders.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
-- Interface language: the portal and login are in English, like the prototypes. Say if they should be in Indonesian.

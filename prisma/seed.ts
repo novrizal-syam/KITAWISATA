@@ -194,7 +194,7 @@ async function seedOpenTrips() {
   await db.openTripBooking.deleteMany({ where: { departure: { openTripId: { in: [...ids] } } } });
   for (const t of TRIPS) {
     const data = { name: t.name, place: t.place, category: t.category, durationLabel: t.durationLabel, pricePerPax: t.pricePerPax, meetingPoint: t.meetingPoint,
-      itinerary: [...t.itinerary], inclusions: t.inclusions, terms: PLACEHOLDER_TERMS(t.name), active: true };
+      itinerary: [...t.itinerary], inclusions: t.inclusions, terms: PLACEHOLDER_TERMS(t.name), active: true, feesReviewed: false };
     await db.openTrip.upsert({ where: { id: t.id }, update: data, create: { id: t.id, ...data } });
     await db.cancellationTier.deleteMany({ where: { openTripId: t.id } });
     await db.cancellationTier.createMany({ data: PLACEHOLDER_TIERS.map((x) => ({ openTripId: t.id, ...x })) });

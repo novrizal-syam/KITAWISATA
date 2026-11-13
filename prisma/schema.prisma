@@ -272,6 +272,8 @@ model OpenTrip {
   /// Trip-specific terms and conditions shown before payment (docs/decisions.md §4).
   terms         String
   active        Boolean             @default(true)
+  /// False until ops has saved the trip with its real terms and fees (seeded trips carry placeholders).
+  feesReviewed  Boolean             @default(false)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @default(now()) @updatedAt
   tiers         CancellationTier[]

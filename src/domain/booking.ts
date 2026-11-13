@@ -4,6 +4,9 @@
 import { roundThousand } from "./money";
 import { tripDays } from "./dates";
 import { CAR_DAILY_RATE, type CarClass, type Need } from "./estimate";
+import { makeT, type T } from "@/i18n";
+
+const EN = makeT("en");
 
 export type FlightClass = "ECONOMY" | "BUSINESS";
 export type TrainClass = "ECONOMY" | "BUSINESS" | "EXECUTIVE";
@@ -32,22 +35,17 @@ export interface BookingOption {
   allowed: boolean;
   /** Why it is locked, when not allowed. */
   lockReason?: string;
-  /** Stored on the booking. */
+  /** Stored on the booking, always in English so records read the same for everyone. */
   description: string;
 }
 
 const FLIGHT_RANK: FlightClass[] = ["ECONOMY", "BUSINESS"];
 const TRAIN_RANK: TrainClass[] = ["ECONOMY", "BUSINESS", "EXECUTIVE"];
 const CAR_RANK: CarClass[] = ["SMALL_CAR", "MEDIUM_MPV", "SUV", "PREMIUM_SEDAN"];
-const LABEL: Record<string, string> = {
-  ECONOMY: "Economy", BUSINESS: "Business", EXECUTIVE: "Executive",
-  SMALL_CAR: "Small car", MEDIUM_MPV: "Medium MPV", SUV: "SUV", PREMIUM_SEDAN: "Premium sedan",
-};
-const CAR_DETAIL: Record<CarClass, string> = {
-  SMALL_CAR: "City car, 4 seats, with driver", MEDIUM_MPV: "7 seats, with driver",
-  SUV: "7 seats, with driver", PREMIUM_SEDAN: "Executive sedan, with driver",
-};
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+const cls = (t: T, c: FlightClass | TrainClass) => t(`class.${c}`);
+const car = (t: T, c: CarClass) => t(`car.${c}`);
+const nightsLabel = (t: T, n: number) => t(n === 1 ? "unit.night" : "unit.nights", { n });
+const daysLabel = (t: T, n: number) => t(n === 1 ? "unit.day" : "unit.days", { n });
 const rp = (n: number) => "Rp " + n.toLocaleString("id-ID");
 
 /** Sample carriers and times, as in the prototype; real inventory comes with the supplier integration. */
@@ -63,42 +61,44 @@ const TRAINS: { id: string; time: string; cls: TrainClass; factor: number }[] = 
   { id: "t3", time: "09.00", cls: "EXECUTIVE", factor: 1.0 },
 ];
 
-export function bookingOptions(need: Need, policy: BookingPolicy, city: CatalogueCity, start: Date, end: Date): BookingOption[] {
+/** Options for one need. `t` localises what the traveller reads; descriptions stay in English. */
+export function bookingOptions(need: Need, policy: BookingPolicy, city: CatalogueCity, start: Date, end: Date, t: T = EN): BookingOption[] {
   const days = Math.max(1, tripDays(start, end));
   const nights = Math.max(0, days - 1);
   switch (need) {
     case "FLIGHT":
       if (!city.flightFare) return [];
       return FLIGHTS.map((f) => ({
-        id: f.id, need, name: `${f.carrier} ${f.time}`, detail: `Jakarta CGK to ${city.name}, direct${f.extra ?? ""} · return`,
+        id: f.id, need, name: `${f.carrier} ${f.time}`,
+        detail: t("opt.flightDetail", { city: city.name, extra: f.extra ? t("opt.lounge") : "" }),
         price: roundThousand(city.flightFare! * f.factor) * 2,
         allowed: FLIGHT_RANK.indexOf(f.cls) <= FLIGHT_RANK.indexOf(policy.flightClass),
-        lockReason: `Your policy allows ${LABEL[policy.flightClass]}`,
-        description: `${f.carrier} CGK-${city.name} return, ${LABEL[f.cls]}`,
+        lockReason: t("opt.lockFlight", { cls: cls(t, policy.flightClass) }),
+        description: `${f.carrier} CGK-${city.name} return, ${cls(EN, f.cls)}`,
       }));
     case "TRAIN":
       if (!city.trainFare) return [];
-      return TRAINS.map((t) => ({
-        id: t.id, need, name: `${LABEL[t.cls]}, ${t.time}`, detail: `Jakarta Gambir to ${city.name} · return`,
-        price: (t.factor === 1 ? city.trainFare! : roundThousand(city.trainFare! * t.factor)) * 2,
-        allowed: TRAIN_RANK.indexOf(t.cls) <= TRAIN_RANK.indexOf(policy.trainClass),
-        lockReason: `Your policy allows up to ${LABEL[policy.trainClass]}`,
-        description: `${LABEL[t.cls]} train, Gambir-${city.name} return`,
+      return TRAINS.map((tr) => ({
+        id: tr.id, need, name: t("opt.trainName", { cls: cls(t, tr.cls), time: tr.time }), detail: t("opt.trainDetail", { city: city.name }),
+        price: (tr.factor === 1 ? city.trainFare! : roundThousand(city.trainFare! * tr.factor)) * 2,
+        allowed: TRAIN_RANK.indexOf(tr.cls) <= TRAIN_RANK.indexOf(policy.trainClass),
+        lockReason: t("opt.lockUpTo", { cls: cls(t, policy.trainClass) }),
+        description: `${cls(EN, tr.cls)} train, Gambir-${city.name} return`,
       }));
     case "HOTEL":
       if (!nights) return [];
       return [...city.hotels].sort((a, b) => a.nightlyRate - b.nightlyRate).map((h) => ({
-        id: `h:${h.id}`, need, name: h.name, detail: `${rp(h.nightlyRate)} per night · ${plural(nights, "night")}`,
+        id: `h:${h.id}`, need, name: h.name, detail: t("opt.hotelDetail", { rate: rp(h.nightlyRate), nights: nightsLabel(t, nights) }),
         price: h.nightlyRate * nights, allowed: h.nightlyRate <= policy.hotelNightCap,
-        lockReason: `Above your ${rp(policy.hotelNightCap)} per night limit`,
-        description: `${h.name}, ${plural(nights, "night")}`,
+        lockReason: t("opt.lockHotel", { cap: rp(policy.hotelNightCap) }),
+        description: `${h.name}, ${nightsLabel(EN, nights)}`,
       }));
     case "CAR":
       return CAR_RANK.map((c) => ({
-        id: `c:${c}`, need, name: LABEL[c], detail: `${CAR_DETAIL[c]} · ${rp(CAR_DAILY_RATE[c])} per day × ${days}`,
+        id: `c:${c}`, need, name: car(t, c), detail: t("opt.carDetail", { detail: t(`carDetail.${c}`), rate: rp(CAR_DAILY_RATE[c]), days }),
         price: CAR_DAILY_RATE[c] * days, allowed: CAR_RANK.indexOf(c) <= CAR_RANK.indexOf(policy.carClass),
-        lockReason: `Your policy allows up to ${LABEL[policy.carClass]}`,
-        description: `${LABEL[c]} with driver, ${plural(days, "day")}`,
+        lockReason: t("opt.lockUpTo", { cls: car(t, policy.carClass) }),
+        description: `${car(EN, c)} with driver, ${daysLabel(EN, days)}`,
       }));
   }
 }

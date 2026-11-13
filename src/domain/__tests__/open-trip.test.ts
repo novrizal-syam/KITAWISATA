@@ -41,7 +41,8 @@ describe("quoteCancellation", () => {
 describe("validateTiers", () => {
   it("accepts a sensible schedule", () => expect(validateTiers(TIERS)).toEqual([]));
   it("rejects a fee that drops closer to departure", () => {
-    expect(validateTiers([{ minDaysBefore: 30, feePercent: 50, minFee: 0 }, { minDaysBefore: 7, feePercent: 20, minFee: 0 }])).toHaveLength(1);
+    expect(validateTiers([{ minDaysBefore: 30, feePercent: 50, minFee: 0 }, { minDaysBefore: 7, feePercent: 20, minFee: 0 }]))
+      .toEqual([{ code: "tier.order", params: { days: 7, prev: 30 } }]);
   });
   it("rejects bad numbers and duplicates", () => {
     expect(validateTiers([{ minDaysBefore: 7, feePercent: 120, minFee: 0 }, { minDaysBefore: 7, feePercent: 50, minFee: -1 }]).length).toBe(3);
