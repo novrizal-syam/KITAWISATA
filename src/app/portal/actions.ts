@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { PORTAL_ROLES, requireRole } from "@/lib/authz";
-import { SppdError, decideStep, submitInput, submitSppd } from "@/server/sppdService";
+import { SppdError, bookItems, decideStep, submitInput, submitSppd } from "@/server/sppdService";
 
 export type FormState = { error?: string; fieldErrors?: Record<string, string> };
 
@@ -44,4 +44,18 @@ export async function decideAction(_prev: FormState, form: FormData): Promise<Fo
   const q = new URLSearchParams({ done: r.status === "REJECTED" ? "rejected" : r.number ? "approved" : "forwarded", who: String(form.get("employee") ?? "") });
   if (r.number) q.set("number", r.number);
   redirect(`/portal/approvals?${q}`);
+}
+
+export async function bookAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const sppdId = String(form.get("sppdId"));
+  const session = await requireRole(PORTAL_ROLES, `/portal/trips/${sppdId}`);
+  let r;
+  try {
+    r = await bookItems(session.user.id, sppdId, form.getAll("pick").map(String));
+  } catch (e) {
+    if (e instanceof SppdError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/portal", "layout");
+  redirect(`/portal/trips/${sppdId}?booked=${r.complete ? "all" : "some"}`);
 }
