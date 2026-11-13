@@ -32,7 +32,9 @@ Pure, unit-tested functions in `src/domain/`:
 ## Status
 - Phase 1 (foundation): repo, database, phone-OTP sign-in, placeholder pages.
 - Phase 2 (domain): travel data model, business rules, demo seed.
-- Next: business-portal screens (submit, approve, book) built on these rules.
+- Phase 3a (business portal): My travel, new SPPD request with live budget, SPPD detail with approval
+  timeline, approvals inbox (approve, reject with a note). The final approval issues the SPPD number.
+- Next: booking inside the grade limits, then Finance reports and the monthly invoice.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).

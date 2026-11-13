@@ -47,4 +47,5 @@ Decisions on the open questions from the prototype review. Each one says what th
 
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
-- The colour tokens taken from the prototype.
+- The colour tokens and font taken from the prototype. The portal uses them now (`src/app/globals.css`); changing them is a one-file edit.
+- Interface language: the portal and login are in English, like the prototypes. Say if they should be in Indonesian.

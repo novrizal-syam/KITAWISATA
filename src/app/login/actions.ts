@@ -9,7 +9,7 @@ export type LoginState = { step: "phone" | "code"; phone?: string; error?: strin
 export async function loginAction(prev: LoginState, form: FormData): Promise<LoginState> {
   if (prev.step === "phone") {
     const phone = normalisePhone(String(form.get("phone") ?? ""));
-    if (!phone) return { step: "phone", error: "Nomor HP tidak valid. Contoh: 0812 3456 7890" };
+    if (!phone) return { step: "phone", error: "That isn't a valid Indonesian mobile number. Example: 0812 3456 7890" };
     const res = await issueOtp(phone);
     if (!res.ok) return { step: "phone", error: res.error };
     return { step: "code", phone };
@@ -21,7 +21,7 @@ export async function loginAction(prev: LoginState, form: FormData): Promise<Log
       redirectTo: String(form.get("callbackUrl") || "/portal"),
     });
   } catch (e) {
-    if (e instanceof AuthError) return { ...prev, error: "Kode salah atau kedaluwarsa." };
+    if (e instanceof AuthError) return { ...prev, error: "That code is wrong or has expired." };
     throw e; // NEXT_REDIRECT on success
   }
   return prev;
