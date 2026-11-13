@@ -23,26 +23,28 @@ Decisions on the open questions from the prototype review. Each one says what th
 ## 2. Approval goes up the reporting line to the Director
 **Decision:** a request is approved by the requester's superior, then that person's superior, and so on until the Director.
 
-**Build (proposed reading, please confirm):**
+**Build (implemented in `src/domain/approval.ts`; my reading, please confirm):**
 - The chain follows `User.managerId` upward and ends at the first user with grade Director, inclusive. Example: Rina → Budi Santoso (Sales Manager) → Andi Kurniawan (Managing Director).
 - Nobody approves their own request. A Director has no superior, so a Director's request goes to the Finance budget check (the prototype already does this for SPPD 042).
 - The existing rule that Finance checks requests above Rp 10,000,000 stays, after the chain.
 - A rejection at any step ends the request.
+- A finance admin never checks their own request. If they are the only finance admin, the Director's approval at the end of their chain is final.
 
 **Prototype:** not changed. It still shows a single manager step.
 
 ## 3. Demo data dates shift relative to today
 **Decision:** demo dates move with the current date. They are not fixed calendar dates.
 
-**Build:** the seed takes an anchor date (default: today) and writes every date as an offset from it, so trips, approvals and invoice periods always look current. SPPD numbers (`046/SPPD/NTI/X/2026`) and invoice periods are derived from the shifted dates.
+**Build (implemented in `prisma/seed.ts`):** the seed takes an anchor date (today in Jakarta, or `DEMO_ANCHOR=YYYY-MM-DD`) and shifts every date by the same amount. Business data treats the prototype's 10 October 2026 as "today"; Open Trip departures are already days from today. SPPD numbers use the Roman month of the shifted approval date, so `046/SPPD/NTI/X/2026` can become `046/SPPD/NTI/XI/2026`. Invoices arrive in a later phase and will follow the same rule.
 **Prototype:** not changed. It is pinned to 10 October 2026.
 
 ## 4. Each Open Trip sets its own terms and cancellation fees
 **Decision:** every Open Trip needs its own terms and conditions, including penalties and cancellation fees.
 
 **Build:** an Open Trip has its own terms text plus a cancellation schedule: a list of tiers, each "cancelled at least N days before departure → fee X% of the trip price" (optionally a fixed minimum in Rupiah). Ops edits these per trip, and a booking keeps a copy of the terms in force when it was made, so later edits don't change existing bookings. The 30% down payment stays as it is. The refund is what was paid minus the fee for the tier the cancellation date falls in.
-**Open question:** should KITA WISATA offer a default schedule that new trips start from? If so, what are the default tiers?
+**Implemented:** `OpenTrip.terms`, `CancellationTier`, `OpenTripBooking.termsSnapshot`, and `src/domain/cancellation.ts` (the fee is charged on the booking total; the refund is what was paid minus the fee, never below zero; tiers must not get cheaper closer to departure).
+**Open question:** should KITA WISATA offer a default schedule that new trips start from? If so, what are the default tiers? The demo trips use a placeholder schedule (30+ days: 10%, 14+ days: 50%, 7+ days: 75%, later: 100%) and placeholder terms text.
 
 ## Not yet decided
-- The extra data models proposed in the kickoff (PolicyException, WebhookEvent, and the rest).
+- The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
 - The colour tokens taken from the prototype.

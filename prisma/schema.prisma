@@ -1,6 +1,6 @@
-// KITA WISATA — Phase 1 schema: identity, organisation and auth only.
-// Travel domain models (SPPD, Booking, Approval, PolicyException, WebhookEvent, ...)
-// land in Phase 2, once the open kickoff decisions are confirmed.
+// KITA WISATA schema.
+// Money is whole Rupiah in Int columns. Calendar dates (trip days, departures) use @db.Date.
+// Business rules live in src/domain; see docs/decisions.md for the kickoff decisions behind them.
 
 generator client {
   provider = "prisma-client"
@@ -20,12 +20,20 @@ enum Role {
 }
 
 model Company {
-  id          String       @id @default(cuid())
-  name        String
-  departments Department[]
-  users       User[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                String         @id @default(cuid())
+  name              String
+  /// Short code used in SPPD numbers, e.g. "NTI" in 046/SPPD/NTI/X/2026.
+  code              String         @unique
+  /// Requests with a budget above this also need a Finance budget check.
+  financeReviewOver Int            @default(10000000)
+  /// Last SPPD sequence number issued.
+  sppdSeq           Int            @default(0)
+  departments       Department[]
+  users             User[]
+  policies          TravelPolicy[]
+  sppds             Sppd[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model Department {
@@ -40,35 +48,286 @@ model Department {
 }
 
 model User {
-  id            String      @id @default(cuid())
-  name          String?
-  phone         String      @unique // E.164, e.g. +628123456789
-  email         String?     @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role        @default(TRAVELLER)
-  companyId     String?
-  company       Company?    @relation(fields: [companyId], references: [id])
-  departmentId  String?
-  department    Department? @relation(fields: [departmentId], references: [id])
-  // Approval hierarchy: who approves this user's requests (pending kickoff decision on self-approval).
-  managerId     String?
-  manager       User?       @relation("ReportsTo", fields: [managerId], references: [id])
-  reports       User[]      @relation("ReportsTo")
-  accounts      Account[]
-  sessions      Session[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                String            @id @default(cuid())
+  name              String?
+  phone             String            @unique // E.164, e.g. +628123456789
+  email             String?           @unique
+  emailVerified     DateTime?
+  image             String?
+  role              Role              @default(TRAVELLER)
+  // Business-portal profile (null for consumer travellers).
+  title             String?
+  grade             Grade?
+  costCentre        String?
+  companyId         String?
+  company           Company?          @relation(fields: [companyId], references: [id])
+  departmentId      String?
+  department        Department?       @relation(fields: [departmentId], references: [id])
+  // Reporting line. Approval walks it upward to the Director (docs/decisions.md §2).
+  managerId         String?
+  manager           User?             @relation("ReportsTo", fields: [managerId], references: [id])
+  reports           User[]            @relation("ReportsTo")
+  accounts          Account[]
+  sessions          Session[]
+  sppds             Sppd[]            @relation("SppdEmployee")
+  approvalSteps     ApprovalStep[]
+  exceptionsDecided PolicyException[]
+  openTripBookings  OpenTripBooking[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+enum Grade {
+  STAFF
+  SUPERVISOR
+  MANAGER
+  DIRECTOR
+}
+
+enum FlightClass {
+  ECONOMY
+  BUSINESS
+}
+
+enum TrainClass {
+  ECONOMY
+  BUSINESS
+  EXECUTIVE
+}
+
+enum CarClass {
+  SMALL_CAR
+  MEDIUM_MPV
+  SUV
+  PREMIUM_SEDAN
+}
+
+enum TravelNeed {
+  FLIGHT
+  TRAIN
+  HOTEL
+  CAR
+}
+
+/// Per-company limits for each grade (prototype "Travel policy" screen).
+model TravelPolicy {
+  id             String      @id @default(cuid())
+  companyId      String
+  company        Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  grade          Grade
+  hotelNightCap  Int
+  flightClass    FlightClass
+  trainClass     TrainClass
+  carClass       CarClass
+  dailyAllowance Int
+
+  @@unique([companyId, grade])
+}
+
+// ---------- Destinations (business travel catalogue) ----------
+
+model City {
+  code       String  @id // IATA-style code, e.g. SUB
+  name       String
+  /// One-way reference economy fare from Jakarta; null when there is no flight.
+  flightFare Int?
+  /// One-way executive train fare from Jakarta Gambir; null when there is no train.
+  trainFare  Int?
+  hotels     Hotel[]
+  sppds      Sppd[]
+}
+
+model Hotel {
+  id          String @id @default(cuid())
+  cityCode    String
+  city        City   @relation(fields: [cityCode], references: [code], onDelete: Cascade)
+  name        String
+  nightlyRate Int
+
+  @@unique([cityCode, name])
+}
+
+// ---------- SPPD (Surat Perintah Perjalanan Dinas, business trip order) ----------
+
+enum SppdStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED // approved; employee can book
+  BOOKED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+model Sppd {
+  id          String            @id @default(cuid())
+  /// Issued on final approval, e.g. 046/SPPD/NTI/X/2026.
+  number      String?           @unique
+  companyId   String
+  company     Company           @relation(fields: [companyId], references: [id])
+  employeeId  String
+  employee    User              @relation("SppdEmployee", fields: [employeeId], references: [id])
+  destCode    String
+  dest        City              @relation(fields: [destCode], references: [code])
+  startDate   DateTime          @db.Date
+  endDate     DateTime          @db.Date
+  purpose     String
+  needs       TravelNeed[]
+  status      SppdStatus        @default(DRAFT)
+  /// Approved budget; always the output of src/domain/estimate.ts at submission.
+  budget      Int
+  submittedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  steps       ApprovalStep[]
+  bookings    TripBooking[]
+  exceptions  PolicyException[]
+
+  @@index([companyId, status])
+  @@index([employeeId])
+}
+
+enum ApprovalKind {
+  SUPERIOR // someone up the reporting line, ending with the Director
+  FINANCE // Finance budget check
+}
+
+enum Decision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// One step of an SPPD's approval chain, decided in `order`.
+model ApprovalStep {
+  id         String       @id @default(cuid())
+  sppdId     String
+  sppd       Sppd         @relation(fields: [sppdId], references: [id], onDelete: Cascade)
+  order      Int
+  kind       ApprovalKind
+  approverId String
+  approver   User         @relation(fields: [approverId], references: [id])
+  decision   Decision     @default(PENDING)
+  decidedAt  DateTime?
+  note       String?
+
+  @@unique([sppdId, order])
+  @@index([approverId, decision])
+}
+
+/// Approval to book something outside the employee's grade policy.
+model PolicyException {
+  id          String        @id @default(cuid())
+  sppdId      String
+  sppd        Sppd          @relation(fields: [sppdId], references: [id], onDelete: Cascade)
+  category    TravelNeed
+  amount      Int
+  reason      String
+  decision    Decision      @default(PENDING)
+  decidedById String?
+  decidedBy   User?         @relation(fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  bookings    TripBooking[]
+  createdAt   DateTime      @default(now())
+}
+
+/// A booked item for an SPPD (flight, train, hotel or car). Invoicing comes in a later phase.
+model TripBooking {
+  id                String           @id @default(cuid())
+  sppdId            String
+  sppd              Sppd             @relation(fields: [sppdId], references: [id], onDelete: Cascade)
+  category          TravelNeed
+  description       String
+  amount            Int
+  inPolicy          Boolean
+  policyExceptionId String?
+  policyException   PolicyException? @relation(fields: [policyExceptionId], references: [id])
+  createdAt         DateTime         @default(now())
+}
+
+// ---------- Open Trip (consumer group trips) ----------
+
+model OpenTrip {
+  id            String              @id // slug, e.g. "lbj"
+  name          String
+  place         String
+  category      String
+  durationLabel String // e.g. 3D2N
+  pricePerPax   Int
+  meetingPoint  String
+  itinerary     String[]
+  inclusions    String
+  /// Trip-specific terms and conditions shown before payment (docs/decisions.md §4).
+  terms         String
+  active        Boolean             @default(true)
+  tiers         CancellationTier[]
+  departures    OpenTripDeparture[]
+}
+
+/// "Cancelled at least minDaysBefore days before departure -> fee of feePercent% of the trip price
+/// (and at least minFee)". Cancelling later than the smallest tier costs 100%.
+model CancellationTier {
+  id            String   @id @default(cuid())
+  openTripId    String
+  openTrip      OpenTrip @relation(fields: [openTripId], references: [id], onDelete: Cascade)
+  minDaysBefore Int
+  feePercent    Int
+  minFee        Int      @default(0)
+
+  @@unique([openTripId, minDaysBefore])
+}
+
+enum DepartureStatus {
+  OPEN
+  NEEDS_MORE // running if more people join
+  GUARANTEED
+  CLOSED
+}
+
+model OpenTripDeparture {
+  id         String            @id @default(cuid())
+  openTripId String
+  openTrip   OpenTrip          @relation(fields: [openTripId], references: [id], onDelete: Cascade)
+  departDate DateTime          @db.Date
+  seatsLeft  Int
+  status     DepartureStatus   @default(OPEN)
+  bookings   OpenTripBooking[]
+
+  @@unique([openTripId, departDate])
+}
+
+enum OpenTripBookingStatus {
+  HELD // seats held, waiting for the down payment
+  CONFIRMED // down payment received
+  PAID // fully paid
+  CANCELLED
+}
+
+model OpenTripBooking {
+  id            String                @id @default(cuid())
+  departureId   String
+  departure     OpenTripDeparture     @relation(fields: [departureId], references: [id])
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id])
+  pax           Int
+  total         Int
+  /// Terms and cancellation tiers in force when the booking was made; later edits to the trip
+  /// do not change existing bookings. Shape: src/domain/cancellation.ts TermsSnapshot.
+  termsSnapshot Json
+  status        OpenTripBookingStatus @default(HELD)
+  cancelledAt   DateTime?
+  refundAmount  Int?
+  createdAt     DateTime              @default(now())
 }
 
 model OtpCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   phone     String
   codeHash  String
   expiresAt DateTime
-  attempts  Int      @default(0)
+  attempts  Int       @default(0)
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([phone, createdAt])
 }

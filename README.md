@@ -24,9 +24,15 @@ In development, OTP codes are printed to the server console (`[otp] +62... -> 12
 - `prototype/`: the reference prototypes with photos (see `prototype/README.md`).
 - `docs/decisions.md`: answers to the kickoff questions and how the build applies them.
 
+## Business rules
+Pure, unit-tested functions in `src/domain/`:
+`estimate.ts` (SPPD budget), `approval.ts` (chain up to the Director), `cancellation.ts` (Open Trip fees),
+`paymentPlan.ts` (30% down payment schedule), `sppdNumber.ts`, `dates.ts`.
+
 ## Status
-Phase 1 (foundation): repo, database, phone-OTP sign-in, placeholder pages.
-Travel domain models and prototype screens follow once the open kickoff decisions are confirmed.
+- Phase 1 (foundation): repo, database, phone-OTP sign-in, placeholder pages.
+- Phase 2 (domain): travel data model, business rules, demo seed.
+- Next: business-portal screens (submit, approve, book) built on these rules.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).
@@ -37,6 +43,14 @@ Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `p
 | Budi Santoso | Manager (Sales Manager) | Andi Kurniawan | 0811 0000 0002 |
 | Sari Wulandari | Finance Admin | Andi Kurniawan | 0811 0000 0003 |
 | Andi Kurniawan | Managing Director | (none) | 0811 0000 0004 |
+| Dimas Pratama | Employee (Account Executive) | Budi Santoso | 0811 0000 0005 |
+| Ayu Lestari | Employee (Supervisor) | Hendra Wijaya | 0811 0000 0006 |
+| Hendra Wijaya | Manager (Operations Manager) | Andi Kurniawan | 0811 0000 0007 |
+| Fajar Nugroho | Employee (IT Engineer) | Hendra Wijaya | 0811 0000 0008 |
+
+The seed also loads the prototype's grade policies, cities and hotels, seven SPPDs with their approval
+chains and bookings, and six Open Trips. Dates are shifted so the demo always sits around today; set
+`DEMO_ANCHOR=YYYY-MM-DD` to pin them.
 
 Any other number signs in as a consumer Traveller and is refused entry to `/portal`.
 
