@@ -1,7 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { estimateBudget } from "@/domain/estimate";
+import { estimateBudget, type Need } from "@/domain/estimate";
+import { bookingOptions, checkBudget, type BookingOption } from "@/domain/booking";
 import { ApprovalRoutingError, currentStep, planApprovalChain, type OrgPerson } from "@/domain/approval";
 import { sppdNumber } from "@/domain/sppdNumber";
 import { daysBetween, parseDate, todayInJakarta, tripDays } from "@/domain/dates";
@@ -92,5 +93,65 @@ export async function decideStep(userId: string, stepId: string, decision: "APPR
     const number = sppdNumber(company.sppdSeq, company.code, today);
     await tx.sppd.update({ where: { id: step.sppdId }, data: { status: "APPROVED", number } });
     return { status: "APPROVED" as const, number };
+  });
+}
+
+// ---------- booking (Phase 3b) ----------
+
+
+/** Everything the planner needs: options per still-unbooked need, and the budget so far. */
+export async function bookingPlan(sppdId: string) {
+  const s = await db.sppd.findUniqueOrThrow({
+    where: { id: sppdId },
+    include: { dest: { include: { hotels: true } }, employee: true, bookings: true },
+  });
+  const policy = s.employee.grade
+    ? await db.travelPolicy.findUnique({ where: { companyId_grade: { companyId: s.companyId, grade: s.employee.grade } } })
+    : null;
+  if (!policy) throw new SppdError("No travel policy for this employee's grade");
+  const bookedNeeds = new Set(s.bookings.map((b) => b.category));
+  const open = s.needs.filter((n) => !bookedNeeds.has(n));
+  const options = Object.fromEntries(open.map((n) => [n, bookingOptions(n, policy, s.dest, s.startDate, s.endDate)])) as Partial<Record<Need, BookingOption[]>>;
+  const allowance = policy.dailyAllowance * tripDays(s.startDate, s.endDate);
+  const alreadyBooked = s.bookings.reduce((a, b) => a + b.amount, 0);
+  return { sppd: s, open, options, allowance, alreadyBooked };
+}
+
+/**
+ * Book the picked options for the employee's own approved SPPD: at most one option per open need,
+ * each allowed by policy, and the total must fit the remaining budget. The SPPD becomes BOOKED
+ * once every need is covered; until then more items can be booked later.
+ */
+export async function bookItems(userId: string, sppdId: string, optionIds: string[]) {
+  const plan = await bookingPlan(sppdId);
+  const s = plan.sppd;
+  if (s.employeeId !== userId) throw new SppdError("Only the traveller can book this trip");
+  if (s.status !== "APPROVED") throw new SppdError("This trip can't be booked in its current status");
+  if (!optionIds.length) throw new SppdError("Select at least one option");
+
+  const byId = new Map(Object.values(plan.options).flat().map((o) => [o!.id + "|" + o!.need, o!]));
+  const picks: BookingOption[] = [];
+  for (const raw of optionIds) {
+    const o = byId.get(raw);
+    if (!o) throw new SppdError("That option is no longer available. Refresh and try again.");
+    if (!o.allowed) throw new SppdError(`${o.name} is outside your travel policy`);
+    if (picks.some((p) => p.need === o.need)) throw new SppdError("Pick one option per item");
+    picks.push(o);
+  }
+  const budget = checkBudget(s.budget, plan.allowance, plan.alreadyBooked, picks.reduce((a, p) => a + p.price, 0));
+  if (!budget.ok) throw new SppdError(`That is over budget by Rp ${(-budget.remaining).toLocaleString("id-ID")}`);
+
+  const coversAll = plan.open.every((n) => picks.some((p) => p.need === n));
+  return db.$transaction(async (tx) => {
+    // Lock in the status check so two tabs can't book the same need twice.
+    const claimed = await tx.sppd.updateMany({
+      where: { id: s.id, status: "APPROVED", updatedAt: s.updatedAt },
+      data: { status: coversAll ? "BOOKED" : "APPROVED" },
+    });
+    if (claimed.count !== 1) throw new SppdError("This trip changed while you were booking. Refresh and try again.");
+    await tx.tripBooking.createMany({
+      data: picks.map((p) => ({ sppdId: s.id, category: p.need, description: p.description, amount: p.price, inPolicy: true })),
+    });
+    return { booked: picks.length, complete: coversAll, remaining: budget.remaining };
   });
 }

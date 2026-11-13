@@ -27,14 +27,17 @@ In development, OTP codes are printed to the server console (`[otp] +62... -> 12
 ## Business rules
 Pure, unit-tested functions in `src/domain/`:
 `estimate.ts` (SPPD budget), `approval.ts` (chain up to the Director), `cancellation.ts` (Open Trip fees),
-`paymentPlan.ts` (30% down payment schedule), `sppdNumber.ts`, `dates.ts`.
+`paymentPlan.ts` (30% down payment schedule), `booking.ts` (bookable options and budget check),
+`sppdNumber.ts`, `dates.ts`.
 
 ## Status
 - Phase 1 (foundation): repo, database, phone-OTP sign-in, placeholder pages.
 - Phase 2 (domain): travel data model, business rules, demo seed.
 - Phase 3a (business portal): My travel, new SPPD request with live budget, SPPD detail with approval
   timeline, approvals inbox (approve, reject with a note). The final approval issues the SPPD number.
-- Next: booking inside the grade limits, then Finance reports and the monthly invoice.
+- Phase 3b (booking): plan an approved trip inside the grade limits (flights, trains, hotels, cars);
+  options above the policy are locked, prices are rebuilt on the server, and items can be booked in parts.
+- Next: Finance reports and the monthly invoice.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).

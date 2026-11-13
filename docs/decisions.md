@@ -45,6 +45,12 @@ Decisions on the open questions from the prototype review. Each one says what th
 **Implemented:** `OpenTrip.terms`, `CancellationTier`, `OpenTripBooking.termsSnapshot`, and `src/domain/cancellation.ts` (the fee is charged on the booking total; the refund is what was paid minus the fee, never below zero; tiers must not get cheaper closer to departure).
 **Open question:** should KITA WISATA offer a default schedule that new trips start from? If so, what are the default tiers? The demo trips use a placeholder schedule (30+ days: 10%, 14+ days: 50%, 7+ days: 75%, later: 100%) and placeholder terms text.
 
+## 5. Booking in parts (kickoff gap)
+The prototype books every selected item at once and then closes the trip, so an item left out can never be booked.
+**Build:** an employee can book some items now and the rest later. The SPPD becomes Booked once every requested
+item has a booking. The budget check always counts what is already booked and reserves the daily allowance
+(paid with salary). Flight and train options are the prototype's sample carriers and times until a supplier is connected.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
 - The colour tokens and font taken from the prototype. The portal uses them now (`src/app/globals.css`); changing them is a one-file edit.
