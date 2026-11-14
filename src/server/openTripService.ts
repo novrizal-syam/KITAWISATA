@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import type { MessageKey } from "@/i18n";
+import { PHOTO_KEYS } from "@/content/photo-credits";
 import { validateTiers } from "@/domain/cancellation";
 import { parseDate } from "@/domain/dates";
 
@@ -17,6 +18,7 @@ export const openTripInput = z.object({
   name: z.string().trim().min(3, "v.tripName").max(80, "v.invalid"),
   place: z.string().trim().min(2, "v.place").max(80, "v.invalid"),
   category: z.enum(CATEGORIES, { message: "v.invalid" }),
+  image: z.enum(PHOTO_KEYS as unknown as [string, ...string[]], { message: "v.invalid" }),
   durationLabel: z.string().trim().regex(/^\d+D\d+N$/, "v.duration"),
   pricePerPax: int(50_000, 100_000_000, "v.price"),
   meetingPoint: z.string().trim().min(3, "v.meeting").max(120, "v.invalid"),
@@ -47,7 +49,7 @@ function check(input: OpenTripInput) {
 }
 
 const tripData = (i: OpenTripInput) => ({
-  name: i.name, place: i.place, category: i.category, durationLabel: i.durationLabel, pricePerPax: i.pricePerPax,
+  name: i.name, place: i.place, category: i.category, image: i.image, durationLabel: i.durationLabel, pricePerPax: i.pricePerPax,
   meetingPoint: i.meetingPoint, itinerary: i.itinerary, inclusions: i.inclusions, terms: i.terms, active: i.active,
   // Saving through the form means ops has set this trip's real terms and fees.
   feesReviewed: true,
@@ -103,7 +105,7 @@ export function parseOpenTripForm(form: FormData) {
   const [days, fee, minFee] = [all("tier.days"), all("tier.fee"), all("tier.minFee")];
   const [dDate, dSeats, dStatus] = [all("dep.date"), all("dep.seats"), all("dep.status")];
   return openTripInput.safeParse({
-    name: form.get("name"), place: form.get("place"), category: form.get("category"),
+    name: form.get("name"), place: form.get("place"), category: form.get("category"), image: form.get("image"),
     durationLabel: String(form.get("durationLabel") ?? "").toUpperCase(), pricePerPax: form.get("pricePerPax"),
     meetingPoint: form.get("meetingPoint"), inclusions: form.get("inclusions"), terms: form.get("terms"),
     itinerary: String(form.get("itinerary") ?? "").split("\n").map((l) => l.trim()).filter(Boolean),

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionForm } from "@/lib/use-action-form";
+import { useState } from "react";
 import { saveApprovalRules, type SettingsState } from "../actions";
 import { planApprovalChain, type ApprovalMode, type ApprovalRules, type Grade } from "@/domain/approval";
 import { rp } from "@/lib/format";
@@ -15,7 +16,7 @@ const fmtInput = (n: number) => n.toLocaleString("id-ID");
 
 export function ApprovalRulesForm({ current, people, exampleId }: { current: ApprovalRules; people: Person[]; exampleId: string | null }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<SettingsState, FormData>(saveApprovalRules, {});
+  const [state, onSubmit, pending] = useActionForm<SettingsState>(saveApprovalRules, {});
   const [mode, setMode] = useState<ApprovalMode>(current.approvalMode);
   const [fullOver, setFullOver] = useState(fmtInput(current.fullChainOver));
   const [finOver, setFinOver] = useState(fmtInput(current.financeReviewOver));
@@ -31,7 +32,7 @@ export function ApprovalRulesForm({ current, people, exampleId }: { current: App
   const err = (k: string) => state.fieldErrors?.[k] && <span className="text-[13px] font-semibold tracking-normal text-red-d normal-case">{state.fieldErrors[k]}</span>;
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <fieldset className="card flex flex-col gap-3 p-5">
         <legend className="sr-only">{t("rules.who")}</legend>
         <h2 className="text-base font-bold">{t("rules.who")}</h2>

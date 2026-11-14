@@ -107,5 +107,25 @@ item has a booking. The budget check always counts what is already booked and re
 
 **To confirm:** the correct effective PPN rate with your tax adviser. Ops can change it at any time.
 
+## 10. Booking Open Trips on the consumer site
+**Build:**
+- **Pages:** home with trips on sale (`/`), trip page with departures, people, fees and terms (`/trips/[id]`), checkout (`/trips/[id]/book`, sign-in required), and **My Trips** (`/my-trips`).
+- **Checkout:** contact details, traveller names, the payment plan, and agreement to the trip's own cancellation fees and terms. The booking stores a snapshot of those terms.
+- **Seats:** taken atomically, so a departure can't be overbooked, and returned when a booking is cancelled or its hold lapses.
+- **Payment plan:** 30/35/35, or 30/70 within 30 days, or in full. Splitting isn't offered within 14 days of departure.
+
+**Payments (to confirm):**
+- No payment gateway is connected yet, and nothing pretends to take a payment. The traveller sees the amount, due date and booking code to quote on a bank transfer.
+- kitawisata ops records each payment on **Trip bookings** (`/portal/trip-bookings`). The first payment confirms the booking; the last makes it fully paid.
+- **Seat hold:** an unpaid hold keeps its seats for a time ops sets in Billing settings. The default is **24 hours**, because payments are confirmed by hand. The prototype's 30 minutes only works once a gateway confirms automatically.
+
+**Cancellation (to confirm):**
+- The fee comes from the booking's own terms snapshot, as a share of the total.
+- kitawisata keeps the fee but **never more than was paid, and charges nothing more**. For example, a 50% fee with only the 30% down payment paid means no refund and no further charge.
+- An unpaid hold cancels free.
+- A refund owed is tracked until ops marks it sent.
+
+**Also fixed:** React 19 cleared typed form fields whenever the server returned an error, for example contact and traveller names. All forms where people type now keep their values (`src/lib/use-action-form.ts`).
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.

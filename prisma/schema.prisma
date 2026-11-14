@@ -267,6 +267,8 @@ model TripBooking {
 
 model OpenTrip {
   id            String              @id // slug, e.g. "lbj"
+  /// Photo key in public/img (e.g. "padar" -> /img/padar.jpg and /img/padar-sm.jpg).
+  image         String              @default("beach")
   name          String
   place         String
   category      String
@@ -319,27 +321,71 @@ model OpenTripDeparture {
 }
 
 enum OpenTripBookingStatus {
-  HELD // seats held, waiting for the down payment
-  CONFIRMED // down payment received
+  HELD // seats held, waiting for the first payment until holdExpiresAt
+  CONFIRMED // first payment received, seats locked; more instalments due
   PAID // fully paid
-  CANCELLED
+  CANCELLED // cancelled by the traveller; fee and refund recorded
+  EXPIRED // hold lapsed without payment; seats released
+}
+
+enum PaymentPlan {
+  SPLIT // 30% down payment, the rest in instalments before departure
+  FULL
+}
+
+enum RefundStatus {
+  NONE
+  PENDING // owed to the traveller
+  REFUNDED
 }
 
 model OpenTripBooking {
-  id            String                @id @default(cuid())
-  departureId   String
-  departure     OpenTripDeparture     @relation(fields: [departureId], references: [id])
-  userId        String
-  user          User                  @relation(fields: [userId], references: [id])
-  pax           Int
-  total         Int
+  id              String                @id @default(cuid())
+  /// Short code the traveller quotes when paying, e.g. KW-7HQ2MX.
+  code            String                @unique
+  departureId     String
+  departure       OpenTripDeparture     @relation(fields: [departureId], references: [id])
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id])
+  pax             Int
+  pricePerPax     Int
+  total           Int
+  plan            PaymentPlan
+  contactName     String
+  contactPhone    String
+  travellerNames  String[]
   /// Terms and cancellation tiers in force when the booking was made; later edits to the trip
   /// do not change existing bookings. Shape: src/domain/cancellation.ts TermsSnapshot.
-  termsSnapshot Json
-  status        OpenTripBookingStatus @default(HELD)
-  cancelledAt   DateTime?
-  refundAmount  Int?
-  createdAt     DateTime              @default(now())
+  termsSnapshot   Json
+  termsAcceptedAt DateTime
+  status          OpenTripBookingStatus @default(HELD)
+  holdExpiresAt   DateTime
+  cancelledAt     DateTime?
+  cancellationFee Int?
+  refundAmount    Int?
+  refundStatus    RefundStatus          @default(NONE)
+  refundedAt      DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @default(now()) @updatedAt
+  instalments     OpenTripInstalment[]
+
+  @@index([userId])
+  @@index([status, holdExpiresAt])
+}
+
+/// One scheduled payment of a booking (the down payment, later instalments, or the full amount).
+model OpenTripInstalment {
+  id             String          @id @default(cuid())
+  bookingId      String
+  booking        OpenTripBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seq            Int
+  percent        Int
+  dueOn          DateTime        @db.Date
+  amount         Int
+  paidAt         DateTime?
+  paidRecordedBy String?
+
+  @@unique([bookingId, seq])
 }
 
 model OtpCode {
@@ -432,9 +478,12 @@ model InvoiceCounter {
 
 /// Platform-wide settings, one row (id "default"), edited by kitawisata ops.
 model PlatformSetting {
-  id         String   @id @default("default")
+  id              String   @id @default("default")
   /// Effective PPN rate on kitawisata's service fee, in basis points (1100 = 11%).
-  ppnRateBps Int      @default(1100)
-  updatedAt  DateTime @updatedAt
-  updatedBy  String?
+  ppnRateBps      Int      @default(1100)
+  /// How long seats stay held for an unpaid Open Trip booking. 24 hours while payments are confirmed
+  /// by hand; reduce to about 30 minutes once a payment gateway confirms automatically.
+  seatHoldMinutes Int      @default(1440)
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?
 }

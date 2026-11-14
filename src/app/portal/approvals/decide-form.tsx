@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionForm } from "@/lib/use-action-form";
 import { decideAction, type FormState } from "../actions";
 import { useI18n } from "@/i18n/client";
 
 export function DecideForm({ stepId, employeeName }: { stepId: string; employeeName: string }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<FormState, FormData>(decideAction, {});
+  const [state, onSubmit, pending] = useActionForm<FormState>(decideAction, {});
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <input type="hidden" name="stepId" value={stepId} />
       <input type="hidden" name="employee" value={employeeName} />
       <label className="field">{t("appr.note", { name: employeeName.split(" ")[0] })}

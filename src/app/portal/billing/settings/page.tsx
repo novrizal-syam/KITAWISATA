@@ -13,6 +13,7 @@ export default async function BillingSettings() {
       <div><p className="eyebrow">{t("bs.eyebrow")}</p><h1 className="text-[28px] font-bold">{t("bs.title")}</h1><p className="mt-1 text-muted">{t("bs.intro")}</p></div>
       <BillingSettingsForm
         ppnPercent={(settings.ppnRateBps / 100).toLocaleString(locale === "id" ? "id-ID" : "en-GB", { maximumFractionDigits: 2 })}
+        seatHoldMinutes={settings.seatHoldMinutes}
         companies={companies.map((c) => ({ id: c.id, name: c.name, fee: c.serviceFeePerBooking, terms: c.paymentTermDays }))}
       />
       {settings.updatedBy && <p className="note">{t("bs.lastChanged", { date: fmtDay(settings.updatedAt, locale), name: settings.updatedBy })}</p>}

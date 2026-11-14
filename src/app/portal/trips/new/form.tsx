@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionForm } from "@/lib/use-action-form";
+import { useMemo, useState } from "react";
 import { submitSppdAction, type FormState } from "../../actions";
 import { estimateBudget, type Need, type PolicyLimits } from "@/domain/estimate";
 import { parseDate } from "@/domain/dates";
@@ -14,7 +15,7 @@ export function NewSppdForm({ policy, cities, today, directChain, fullChain, rul
   policy: PolicyLimits; cities: City[]; today: string; directChain: string[]; fullChain: string[]; rules: ApprovalRules;
 }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<FormState, FormData>(submitSppdAction, {});
+  const [state, onSubmit, pending] = useActionForm<FormState>(submitSppdAction, {});
   const [dest, setDest] = useState(cities[0]?.code ?? "");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -30,7 +31,7 @@ export function NewSppdForm({ policy, cities, today, directChain, fullChain, rul
   const err = (k: string) => state.fieldErrors?.[k] && <span className="text-[13px] font-semibold tracking-normal text-red-d normal-case">{state.fieldErrors[k]}</span>;
 
   return (
-    <form action={action} className="grid gap-5 lg:grid-cols-[1fr_320px]">
+    <form onSubmit={onSubmit} className="grid gap-5 lg:grid-cols-[1fr_320px]">
       <div className="card flex flex-col gap-4 p-5">
         <label className="field">{t("new.dest")}
           <select name="dest" className="input" value={dest} onChange={(e) => setDest(e.target.value)}>

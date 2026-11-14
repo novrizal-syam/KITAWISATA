@@ -40,6 +40,7 @@ export async function saveBillingSettings(_prev: BillingState, form: FormData): 
   const ids = form.getAll("company.id").map(String), fees = form.getAll("company.fee").map(String), terms = form.getAll("company.terms").map(String);
   const parsed = billingSettingsInput.safeParse({
     ppnPercent: form.get("ppnPercent"),
+    seatHoldMinutes: form.get("seatHoldMinutes"),
     companies: ids.map((id, i) => ({ id, serviceFeePerBooking: fees[i], paymentTermDays: terms[i] })),
   });
   if (!parsed.success) {

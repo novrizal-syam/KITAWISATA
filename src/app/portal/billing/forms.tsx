@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { generateAction, recordPaymentAction, saveBillingSettings, type BillingState } from "./actions";
 import { useI18n } from "@/i18n/client";
+import { useActionForm } from "@/lib/use-action-form";
 
 export function GenerateButton({ companyId, companyName, disabled }: { companyId: string; companyName: string; disabled: boolean }) {
   const { t } = useI18n();
@@ -28,17 +29,24 @@ export function RecordPaymentButton({ invoiceId, number }: { invoiceId: string; 
   );
 }
 
-export function BillingSettingsForm({ ppnPercent, companies }: { ppnPercent: string; companies: { id: string; name: string; fee: number; terms: number }[] }) {
+export function BillingSettingsForm({ ppnPercent, seatHoldMinutes, companies }: { ppnPercent: string; seatHoldMinutes: number; companies: { id: string; name: string; fee: number; terms: number }[] }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<BillingState, FormData>(saveBillingSettings, {});
+  const [state, onSubmit, pending] = useActionForm<BillingState>(saveBillingSettings, {});
   const err = (k: string) => state.fieldErrors?.[k] && <span className="text-[13px] font-semibold tracking-normal text-red-d normal-case">{state.fieldErrors[k]}</span>;
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <section className="card flex flex-col gap-3 p-5">
         <h2 className="text-base font-bold">{t("bs.ppn")}</h2>
         <p className="note">{t("bs.ppnHelp")}</p>
         <label className="field max-w-[12rem]">{t("bs.ppnLabel")}
           <input name="ppnPercent" inputMode="decimal" className="input num" defaultValue={ppnPercent} required />{err("ppnPercent")}
+        </label>
+      </section>
+      <section className="card flex flex-col gap-3 p-5">
+        <h2 className="text-base font-bold">{t("bs.hold")}</h2>
+        <p className="note">{t("bs.holdHelp")}</p>
+        <label className="field max-w-[12rem]">{t("bs.holdLabel")}
+          <input name="seatHoldMinutes" inputMode="numeric" className="input num" defaultValue={seatHoldMinutes} required />{err("seatHoldMinutes")}
         </label>
       </section>
       <section className="card overflow-x-auto p-5">
