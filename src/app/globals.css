@@ -24,6 +24,8 @@
   --color-blue: #2d4f7c;
   --color-blue-t: #e8eef6;
   --color-grey-t: #efeae8;
+  /* Muted bars for past periods: 3.8:1 on white (charts emphasise the current period in brand red). */
+  --color-bar-muted: #8c817e;
   --font-sans: "Open Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 

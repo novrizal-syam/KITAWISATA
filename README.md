@@ -31,7 +31,7 @@ The app is bilingual (Bahasa Indonesia and English). Add every new string to bot
 ## Business rules
 Pure, unit-tested functions in `src/domain/`:
 `estimate.ts` (SPPD budget), `approval.ts` (chain up to the Director), `cancellation.ts` (Open Trip fees),
-`paymentPlan.ts` (30% down payment schedule), `booking.ts` (bookable options and budget check),
+`paymentPlan.ts` (30% down payment schedule), `booking.ts` (bookable options and budget check), `invoice.ts`,
 `sppdNumber.ts`, `dates.ts`.
 
 ## Status
@@ -44,7 +44,8 @@ Pure, unit-tested functions in `src/domain/`:
 - Phase 4a (settings): Finance sets the approval rules; ops creates and edits Open Trips with their terms and
   cancellation fees; brand theme from the logo.
 - Phase 4b (bilingual): Indonesian and English throughout, with a language switch; placeholder-fee badges on demo Open Trips.
-- Next: Finance reports and the monthly invoice.
+- Phase 4c (invoicing): Finance spending report and CSV export, monthly invoices, ops billing and billing settings (PPN rate, fees, terms).
+- Next: the consumer site (Open Trip booking with the 30% down payment and cancellation fees).
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).

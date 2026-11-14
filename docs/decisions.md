@@ -85,5 +85,27 @@ item has a booking. The budget check always counts what is already booked and re
 
 **Build:** each seeded demo trip carries a **"Placeholder fees, review"** badge on the Open Trips list until ops saves it through the form (`OpenTrip.feesReviewed`). Re-running the seed resets the demo trips to placeholders.
 
+## 9. Monthly invoicing, with PPN as a setting
+**Decision (2026-11-14):** invoicing as in the prototype; the PPN rate is a setting ("make it in setting").
+
+**Build:**
+- **Invoice amount** (`src/domain/invoice.ts`): travel bookings at cost, plus a service fee per booking, plus PPN on the service fee only.
+- **Settings:** kitawisata ops sets them on **Billing settings** (`/portal/billing/settings`):
+  - the effective PPN rate, stored in basis points (default 11%, as in the prototype)
+  - each company's service fee per booking (default Rp 25,000) and payment terms (default 30 days)
+
+  An issued invoice keeps the rate and fee it was made with.
+- **Generating:** ops bills a company on **Billing** (`/portal/billing`) with "Generate invoice now". It bills every uninvoiced booking for the current month.
+  - **Numbers:** `INV/KW/<year>/<month>/<seq>`, with the sequence shared by all companies.
+  - **Double billing:** bookings are claimed only if they're still uninvoiced, so two runs can't bill the same booking.
+  - **Automatic run:** generating on the 1st of each month isn't switched on yet.
+- **Payment:** ops records a payment received (who and when). A virtual-account integration will replace this; the prototype's simulated "Pay by VA" button was left out.
+- **Finance:**
+  - **Spending report** (`/portal/finance/report`): month by month, with CSV export for Excel. It includes everything booked in the month (Jakarta time) and the previous three invoiced months.
+  - **Invoice list:** each invoice opens as a document grouped by cost centre.
+- **Demo data:** the prototype's three archived invoices are seeded as the three months before the current one.
+
+**To confirm:** the correct effective PPN rate with your tax adviser. Ops can change it at any time.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.

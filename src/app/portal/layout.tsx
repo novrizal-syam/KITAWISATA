@@ -48,12 +48,19 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
           </div>
           <nav className="flex flex-col gap-1" aria-label="Portal">
-            {ops ? <NavLink href="/portal/open-trips" label={t("nav.openTrips")} /> : <>
+            {ops ? <>
+              <NavLink href="/portal/open-trips" label={t("nav.openTrips")} />
+              <NavLink href="/portal/billing" label={t("nav.billing")} exact />
+              <NavLink href="/portal/billing/settings" label={t("nav.billingSettings")} />
+            </> : <>
             {approver && <NavLink href="/portal/approvals" label={t("nav.approvals")} count={pending} />}
             <NavLink href="/portal/trips" label={t("nav.myTravel")} exact />
             <NavLink href="/portal/trips/new" label={t("nav.newRequest")} exact />
             {me.role === "FINANCE_ADMIN" && (
               <>
+                <span className="mt-3 px-3 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">{t("nav.finance")}</span>
+                <NavLink href="/portal/finance/report" label={t("nav.report")} />
+                <NavLink href="/portal/finance/invoices" label={t("nav.invoices")} />
                 <span className="mt-3 px-3 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">{t("nav.settings")}</span>
                 <NavLink href="/portal/settings/approvals" label={t("nav.approvalRules")} />
               </>
