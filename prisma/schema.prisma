@@ -34,6 +34,10 @@ model Company {
   approvalRulesUpdatedBy String?
   /// Last SPPD sequence number issued.
   sppdSeq                Int            @default(0)
+  /// Billing terms, set by kitawisata ops on Billing settings.
+  paymentTermDays        Int            @default(30)
+  serviceFeePerBooking   Int            @default(25000)
+  invoices               Invoice[]
   departments            Department[]
   users                  User[]
   policies               TravelPolicy[]
@@ -243,7 +247,7 @@ model PolicyException {
   createdAt   DateTime      @default(now())
 }
 
-/// A booked item for an SPPD (flight, train, hotel or car). Invoicing comes in a later phase.
+/// A booked item for an SPPD (flight, train, hotel or car), billed on the company's monthly invoice.
 model TripBooking {
   id                String           @id @default(cuid())
   sppdId            String
@@ -254,6 +258,8 @@ model TripBooking {
   inPolicy          Boolean
   policyExceptionId String?
   policyException   PolicyException? @relation(fields: [policyExceptionId], references: [id])
+  invoiceId         String?
+  invoice           Invoice?         @relation(fields: [invoiceId], references: [id])
   createdAt         DateTime         @default(now())
 }
 
@@ -380,4 +386,55 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+// ---------- Corporate invoicing ----------
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+}
+
+/// Monthly invoice from kitawisata to a company: travel bookings at cost, plus a service fee per
+/// booking and PPN on that fee. Archived invoices from before the platform have totals but no bookings.
+model Invoice {
+  id             String        @id @default(cuid())
+  /// INV/KW/<year>/<month>/<seq>: the billing period, then a sequence shared by all companies.
+  number         String        @unique
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  periodYear     Int
+  periodMonth    Int
+  issuedOn       DateTime      @db.Date
+  dueOn          DateTime      @db.Date
+  bookingCount   Int
+  subtotal       Int
+  feePerBooking  Int
+  serviceFee     Int
+  /// PPN rate used, in basis points (1100 = 11%), kept so later rate changes don't alter issued invoices.
+  ppnRateBps     Int
+  ppn            Int
+  total          Int
+  status         InvoiceStatus @default(ISSUED)
+  paidAt         DateTime?
+  paidRecordedBy String?
+  createdAt      DateTime      @default(now())
+  bookings       TripBooking[]
+
+  @@index([companyId, periodYear, periodMonth])
+}
+
+/// Invoice number sequence per billing period ("2026-11").
+model InvoiceCounter {
+  period String @id
+  seq    Int    @default(0)
+}
+
+/// Platform-wide settings, one row (id "default"), edited by kitawisata ops.
+model PlatformSetting {
+  id         String   @id @default("default")
+  /// Effective PPN rate on kitawisata's service fee, in basis points (1100 = 11%).
+  ppnRateBps Int      @default(1100)
+  updatedAt  DateTime @updatedAt
+  updatedBy  String?
 }

@@ -23,7 +23,8 @@ import {
 import { estimateBudget } from "../src/domain/estimate";
 import { planApprovalChain, type OrgPerson } from "../src/domain/approval";
 import { sppdNumber } from "../src/domain/sppdNumber";
-import { addDays, parseDate, shiftFrom, todayInJakarta } from "../src/domain/dates";
+import { addDays, parseDate, shiftFrom, todayInJakarta, utcDate } from "../src/domain/dates";
+import { dueDate, invoiceNumber, monthOf, periodKey, previousMonth } from "../src/domain/invoice";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
@@ -185,8 +186,40 @@ async function seedCompany() {
       await db.tripBooking.create({ data: { sppdId: sppd.id, category, description, amount, inPolicy, policyExceptionId: !inPolicy && ex?.category === category ? ex.id : null } });
     }
   }
-  await db.company.update({ where: { id: company.id }, data: { sppdSeq: seq } });
+  await db.company.update({ where: { id: company.id }, data: { sppdSeq: seq, serviceFeePerBooking: 25_000, paymentTermDays: 30 } });
+  await seedInvoices(company.id);
   return { company, sppds: SPPDS.length, people: PEOPLE.length };
+}
+
+/**
+ * The prototype's archived invoices (July to September with "today" in October), shifted to the
+ * three months before the anchor month. The latest is unpaid and due 30 days after issue.
+ * They carry totals only; this month's seeded bookings stay uninvoiced.
+ */
+async function seedInvoices(companyId: string) {
+  await db.invoice.deleteMany({ where: { companyId } });
+  const { year, month } = monthOf(anchor);
+  const archive = [
+    { back: 3, seq: 31, subtotal: 37_900_000, bookings: 20, paid: true },
+    { back: 2, seq: 29, subtotal: 41_500_000, bookings: 22, paid: true },
+    { back: 1, seq: 27, subtotal: 35_300_000, bookings: 20, paid: false },
+  ];
+  for (const a of archive) {
+    let p = { year, month };
+    for (let i = 0; i < a.back; i++) p = previousMonth(p);
+    // Issued on the 1st of the month after the period.
+    const issuedOn = p.month === 12 ? utcDate(p.year + 1, 1, 1) : utcDate(p.year, p.month + 1, 1);
+    const fee = a.bookings * 25_000, ppn = Math.round(fee * 0.11);
+    await db.invoiceCounter.upsert({ where: { period: periodKey(p.year, p.month) }, update: { seq: a.seq }, create: { period: periodKey(p.year, p.month), seq: a.seq } });
+    await db.invoice.create({
+      data: {
+        number: invoiceNumber(p.year, p.month, a.seq), companyId, periodYear: p.year, periodMonth: p.month, issuedOn, dueOn: dueDate(issuedOn, 30),
+        bookingCount: a.bookings, subtotal: a.subtotal, feePerBooking: 25_000, serviceFee: fee, ppnRateBps: 1100, ppn, total: a.subtotal + fee + ppn,
+        status: a.paid ? "PAID" : "ISSUED", paidAt: a.paid ? addDays(issuedOn, 20) : null, paidRecordedBy: a.paid ? "kitawisata Ops" : null,
+      },
+    });
+  }
+  await db.platformSetting.upsert({ where: { id: "default" }, update: { ppnRateBps: 1100, updatedBy: null }, create: { id: "default", ppnRateBps: 1100 } });
 }
 
 async function seedOpenTrips() {

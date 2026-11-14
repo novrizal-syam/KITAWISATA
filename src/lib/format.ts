@@ -38,3 +38,12 @@ export function fieldErrorsFrom(issues: { path: PropertyKey[]; message: string }
   for (const i of issues) out[String(i.path[0])] ??= tm(t, i.message);
   return out;
 }
+
+/** Basis points as a percentage: 1100 -> "11%", 1150 -> "11.5%" / "11,5%". */
+export const fmtPct = (bps: number, locale: Locale) => (bps / 100).toLocaleString(BCP47[locale], { maximumFractionDigits: 2 }) + "%";
+
+export const periodLabel = (t: T, year: number, month: number) => `${t(`month.${month as 1}`)} ${year}`;
+
+/** Short Rupiah for chart labels: Rp 34,7 jt / Rp 34.7m. */
+export const rpShort = (n: number, locale: Locale) =>
+  n >= 1_000_000 ? `Rp ${(n / 1_000_000).toLocaleString(BCP47[locale], { maximumFractionDigits: 1 })}${locale === "id" ? " jt" : "m"}` : rp(n);

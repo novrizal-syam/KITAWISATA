@@ -11,7 +11,11 @@ export default async function ApprovalRulesPage() {
   const { t, locale } = await getT();
   const c = me.company;
   // Example requester for the preview: the first staff member with a manager below a manager.
-  const people = await db.user.findMany({ where: { companyId: c.id }, select: { id: true, name: true, grade: true, managerId: true, role: true } });
+  // Ordered so the example person is stable between visits: the first such employee added.
+  const people = await db.user.findMany({
+    where: { companyId: c.id }, select: { id: true, name: true, grade: true, managerId: true, role: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
   const example = people.find((p) => p.grade === "STAFF" && p.managerId && people.find((m) => m.id === p.managerId)?.grade !== "DIRECTOR") ?? people.find((p) => p.managerId);
 
   return (
