@@ -25,6 +25,7 @@ import { planApprovalChain, type OrgPerson } from "../src/domain/approval";
 import { sppdNumber } from "../src/domain/sppdNumber";
 import { addDays, parseDate, shiftFrom, todayInJakarta, utcDate } from "../src/domain/dates";
 import { dueDate, invoiceNumber, monthOf, periodKey, previousMonth } from "../src/domain/invoice";
+import { buildInstalments } from "../src/domain/openTripBooking";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
@@ -100,27 +101,27 @@ const PLACEHOLDER_TIERS = [
 const STATUS: Record<string, DepartureStatus> = { Guaranteed: "GUARANTEED", Open: "OPEN" };
 
 const TRIPS = [
-  { id: "lbj", name: "Labuan Bajo Sailing Trip", place: "Labuan Bajo, NTT", category: "island", durationLabel: "3D2N", pricePerPax: 2_450_000, meetingPoint: "Komodo Airport (LBJ), 09.00 WITA",
+  { id: "lbj", image: "padar", name: "Labuan Bajo Sailing Trip", place: "Labuan Bajo, NTT", category: "island", durationLabel: "3D2N", pricePerPax: 2_450_000, meetingPoint: "Komodo Airport (LBJ), 09.00 WITA",
     deps: [[47, 6, "Guaranteed"], [54, 12, "Guaranteed"], [68, 14, "Open"]],
     itinerary: ["Kelor Island, Manjarite snorkeling, sunset at Kalong Island", "Padar Island sunrise, Pink Beach, Komodo National Park", "Taka Makassar, Manta Point, back to Labuan Bajo"],
     inclusions: "Phinisi boat cabin, 7 meals, park fees, snorkel gear, trip leader" },
-  { id: "bromo", name: "Bromo and Ijen Crater", place: "East Java", category: "mountain", durationLabel: "3D2N", pricePerPax: 1_650_000, meetingPoint: "Malang station, 22.00 WIB",
+  { id: "bromo", image: "bromo", name: "Bromo and Ijen Crater", place: "East Java", category: "mountain", durationLabel: "3D2N", pricePerPax: 1_650_000, meetingPoint: "Malang station, 22.00 WIB",
     deps: [[24, 11, "Needs 4 more"], [38, 16, "Open"]],
     itinerary: ["Jeep to Penanjakan for sunrise, Bromo crater, Savana", "Drive to Banyuwangi, rest at homestay", "Midnight hike to Ijen blue fire, back to Surabaya"],
     inclusions: "Jeep, homestay, 5 meals, entrance tickets, gas mask, guide" },
-  { id: "raja", name: "Raja Ampat Explorer", place: "West Papua", category: "diving", durationLabel: "5D4N", pricePerPax: 7_900_000, meetingPoint: "Sorong Airport (SOQ), 10.00 WIT",
+  { id: "raja", image: "raja", name: "Raja Ampat Explorer", place: "West Papua", category: "diving", durationLabel: "5D4N", pricePerPax: 7_900_000, meetingPoint: "Sorong Airport (SOQ), 10.00 WIT",
     deps: [[68, 3, "Guaranteed"], [96, 10, "Open"]],
     itinerary: ["Ferry to Waisai, homestay check-in", "Piaynemo viewpoint, Telaga Bintang", "Arborek village, manta snorkeling", "Friwen wall, Pasir Timbul sandbar", "Back to Sorong"],
     inclusions: "Speedboat, homestay, 13 meals, marine park fee, trip leader" },
-  { id: "karimun", name: "Karimunjawa Island Hopping", place: "Central Java", category: "island", durationLabel: "4D3N", pricePerPax: 1_950_000, meetingPoint: "Kartini Port, Jepara, 07.00 WIB",
+  { id: "karimun", image: "beach", name: "Karimunjawa Island Hopping", place: "Central Java", category: "island", durationLabel: "4D3N", pricePerPax: 1_950_000, meetingPoint: "Kartini Port, Jepara, 07.00 WIB",
     deps: [[91, 12, "Open"]],
     itinerary: ["Ferry from Jepara, sunset at Tanjung Gelam", "Menjangan Kecil, Cemara Besar snorkeling", "Shark pond, Bukit Joko Tuo", "Ferry back to Jepara"],
     inclusions: "Ferry, homestay, boat, 9 meals, snorkel gear" },
-  { id: "dieng", name: "Dieng Plateau Sunrise", place: "Central Java", category: "mountain", durationLabel: "2D1N", pricePerPax: 950_000, meetingPoint: "Wonosobo, 13.00 WIB",
+  { id: "dieng", image: "dieng", name: "Dieng Plateau Sunrise", place: "Central Java", category: "mountain", durationLabel: "2D1N", pricePerPax: 950_000, meetingPoint: "Wonosobo, 13.00 WIB",
     deps: [[10, 5, "Guaranteed"], [31, 14, "Open"]],
     itinerary: ["Arjuna temples, Kawah Sikidang, Telaga Warna", "Sikunir sunrise, Batu Ratapan Angin, back to Wonosobo"],
     inclusions: "Homestay, 3 meals, entrance tickets, local guide" },
-  { id: "tidung", name: "Pulau Tidung Weekend", place: "Thousand Islands, Jakarta", category: "weekend", durationLabel: "2D1N", pricePerPax: 750_000, meetingPoint: "Kali Adem Port, 06.30 WIB",
+  { id: "tidung", image: "tidung", name: "Pulau Tidung Weekend", place: "Thousand Islands, Jakarta", category: "weekend", durationLabel: "2D1N", pricePerPax: 750_000, meetingPoint: "Kali Adem Port, 06.30 WIB",
     deps: [[19, 20, "Guaranteed"], [26, 20, "Open"]],
     itinerary: ["Speedboat to Tidung, Love Bridge, snorkeling", "Sunrise, bike around the island, back to Jakarta"],
     inclusions: "Speedboat, homestay, 4 meals, bike, snorkel gear" },
@@ -219,7 +220,7 @@ async function seedInvoices(companyId: string) {
       },
     });
   }
-  await db.platformSetting.upsert({ where: { id: "default" }, update: { ppnRateBps: 1100, updatedBy: null }, create: { id: "default", ppnRateBps: 1100 } });
+  await db.platformSetting.upsert({ where: { id: "default" }, update: { ppnRateBps: 1100, seatHoldMinutes: 1440, updatedBy: null }, create: { id: "default", ppnRateBps: 1100 } });
 }
 
 async function seedOpenTrips() {
@@ -227,7 +228,7 @@ async function seedOpenTrips() {
   await db.openTripBooking.deleteMany({ where: { departure: { openTripId: { in: [...ids] } } } });
   for (const t of TRIPS) {
     const data = { name: t.name, place: t.place, category: t.category, durationLabel: t.durationLabel, pricePerPax: t.pricePerPax, meetingPoint: t.meetingPoint,
-      itinerary: [...t.itinerary], inclusions: t.inclusions, terms: PLACEHOLDER_TERMS(t.name), active: true, feesReviewed: false };
+      itinerary: [...t.itinerary], inclusions: t.inclusions, terms: PLACEHOLDER_TERMS(t.name), active: true, feesReviewed: false, image: t.image };
     await db.openTrip.upsert({ where: { id: t.id }, update: data, create: { id: t.id, ...data } });
     await db.cancellationTier.deleteMany({ where: { openTripId: t.id } });
     await db.cancellationTier.createMany({ data: PLACEHOLDER_TIERS.map((x) => ({ openTripId: t.id, ...x })) });
@@ -236,7 +237,31 @@ async function seedOpenTrips() {
       data: t.deps.map(([days, seatsLeft, label]) => ({ openTripId: t.id, departDate: addDays(anchor, days), seatsLeft, status: STATUS[label] ?? "NEEDS_MORE" })),
     });
   }
+  await seedTraveller();
   return TRIPS.length;
+}
+
+/**
+ * A consumer traveller (Dewi) with one confirmed Pulau Tidung booking: 2 people, down payment paid.
+ * Built through the same rules the app uses, with the trip's placeholder terms as the snapshot.
+ */
+async function seedTraveller() {
+  const dewi = await db.user.upsert({
+    where: { phone: "+6281100000010" }, update: { name: "Dewi Anggraini", role: "TRAVELLER", companyId: null },
+    create: { phone: "+6281100000010", name: "Dewi Anggraini", role: "TRAVELLER" },
+  });
+  const dep = await db.openTripDeparture.findFirstOrThrow({ where: { openTripId: "tidung", departDate: addDays(anchor, 26) }, include: { openTrip: true } });
+  const total = dep.openTrip.pricePerPax * 2;
+  const plan = buildInstalments("SPLIT", total, anchor, dep.departDate)!;
+  await db.openTripDeparture.update({ where: { id: dep.id }, data: { seatsLeft: { decrement: 2 } } });
+  await db.openTripBooking.create({
+    data: {
+      code: "KW-DEMO26", departureId: dep.id, userId: dewi.id, pax: 2, pricePerPax: dep.openTrip.pricePerPax, total, plan: "SPLIT",
+      contactName: "Dewi Anggraini", contactPhone: dewi.phone, travellerNames: ["Dewi Anggraini", "Bayu Saputra"],
+      termsSnapshot: { terms: dep.openTrip.terms, tiers: PLACEHOLDER_TIERS }, termsAcceptedAt: new Date(), status: "CONFIRMED", holdExpiresAt: new Date(),
+      instalments: { create: plan.map((p) => ({ ...p, paidAt: p.seq === 1 ? new Date() : null, paidRecordedBy: p.seq === 1 ? "kitawisata Ops" : null })) },
+    },
+  });
 }
 
 async function seedOps() {

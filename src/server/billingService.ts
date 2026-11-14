@@ -18,8 +18,11 @@ const percent = z.preprocess(
 const rupiah = z.preprocess((v) => (typeof v === "string" ? Number(v.replace(/[^\d]/g, "")) : v), z.number({ message: "v.amount" }).int("v.amount").min(0, "v.amount").max(10_000_000, "v.amountMax"));
 const termDays = z.preprocess((v) => (typeof v === "string" ? Number(v.replace(/[^\d]/g, "")) : v), z.number({ message: "v.terms30" }).int("v.terms30").min(0, "v.terms30").max(120, "v.terms30"));
 
+const holdMinutes = z.preprocess((v) => (typeof v === "string" ? Number(v.replace(/[^\d]/g, "")) : v), z.number({ message: "v.hold" }).int("v.hold").min(5, "v.hold").max(10_080, "v.hold"));
+
 export const billingSettingsInput = z.object({
   ppnPercent: percent,
+  seatHoldMinutes: holdMinutes,
   companies: z.array(z.object({ id: z.string().min(1), serviceFeePerBooking: rupiah, paymentTermDays: termDays })),
 });
 
@@ -28,8 +31,9 @@ export async function updateBillingSettings(opsUserId: string, input: z.infer<ty
   const ops = await db.user.findUnique({ where: { id: opsUserId } });
   if (ops?.role !== "OPS") throw new BillingError("err.opsOnly");
   const ppnRateBps = Math.round(input.ppnPercent * 100);
+  const seatHoldMinutes = input.seatHoldMinutes;
   await db.$transaction([
-    db.platformSetting.upsert({ where: { id: "default" }, update: { ppnRateBps, updatedBy: ops.name ?? ops.phone }, create: { id: "default", ppnRateBps, updatedBy: ops.name ?? ops.phone } }),
+    db.platformSetting.upsert({ where: { id: "default" }, update: { ppnRateBps, seatHoldMinutes, updatedBy: ops.name ?? ops.phone }, create: { id: "default", ppnRateBps, seatHoldMinutes, updatedBy: ops.name ?? ops.phone } }),
     ...input.companies.map((c) => db.company.update({ where: { id: c.id }, data: { serviceFeePerBooking: c.serviceFeePerBooking, paymentTermDays: c.paymentTermDays } })),
   ]);
 }

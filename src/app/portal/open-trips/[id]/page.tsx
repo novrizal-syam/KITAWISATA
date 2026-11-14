@@ -15,7 +15,7 @@ export default async function EditOpenTrip({ params }: { params: Promise<{ id: s
     <div className="flex max-w-4xl flex-col gap-5">
       <div><p className="eyebrow">{tr("ot.editEyebrow")}</p><h1 className="text-[28px] font-bold">{t.name}</h1></div>
       <TripForm initial={{
-        id: t.id, name: t.name, place: t.place, category: t.category, durationLabel: t.durationLabel, pricePerPax: t.pricePerPax,
+        id: t.id, name: t.name, place: t.place, category: t.category, image: t.image, durationLabel: t.durationLabel, pricePerPax: t.pricePerPax,
         meetingPoint: t.meetingPoint, itinerary: t.itinerary, inclusions: t.inclusions, terms: t.terms, active: t.active,
         tiers: t.tiers.map((x) => ({ minDaysBefore: x.minDaysBefore, feePercent: x.feePercent, minFee: x.minFee })),
         departures: t.departures.map((d) => ({ date: toIsoDate(d.departDate), seatsLeft: d.seatsLeft, status: d.status })),

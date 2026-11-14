@@ -1,15 +1,17 @@
 "use client";
 
+import { useActionForm } from "@/lib/use-action-form";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { saveOpenTrip, type TripFormState } from "./actions";
 import { quoteCancellation, validateTiers, type Tier } from "@/domain/cancellation";
 import { addDays, todayInJakarta, toIsoDate } from "@/domain/dates";
 import { rp } from "@/lib/format";
 import { useI18n } from "@/i18n/client";
+import { PHOTO_CREDITS } from "@/content/photo-credits";
 
 export type TripFormValues = {
-  id?: string; name: string; place: string; category: string; durationLabel: string; pricePerPax: number;
+  id?: string; name: string; place: string; category: string; image: string; durationLabel: string; pricePerPax: number;
   meetingPoint: string; itinerary: string[]; inclusions: string; terms: string; active: boolean;
   tiers: Tier[]; departures: { date: string; seatsLeft: number; status: string }[];
 };
@@ -20,7 +22,7 @@ const num = (s: string) => Number(s.replace(/[^\d]/g, "")) || 0;
 
 export function TripForm({ initial }: { initial?: TripFormValues }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<TripFormState, FormData>(saveOpenTrip, {});
+  const [state, onSubmit, pending] = useActionForm<TripFormState>(saveOpenTrip, {});
   const [price, setPrice] = useState(initial ? initial.pricePerPax.toLocaleString("id-ID") : "");
   const [tiers, setTiers] = useState<{ days: string; fee: string; minFee: string }[]>(
     initial?.tiers.length ? [...initial.tiers].sort((a, b) => b.minDaysBefore - a.minDaysBefore).map((t) => ({ days: String(t.minDaysBefore), fee: String(t.feePercent), minFee: t.minFee ? t.minFee.toLocaleString("id-ID") : "" }))
@@ -37,7 +39,7 @@ export function TripForm({ initial }: { initial?: TripFormValues }) {
   const setTier = (i: number, k: "days" | "fee" | "minFee", v: string) => setTiers(tiers.map((t, j) => (j === i ? { ...t, [k]: k === "minFee" ? (v ? num(v).toLocaleString("id-ID") : "") : v.replace(/[^\d]/g, "") } : t)));
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
       <section className="card grid gap-4 p-5 sm:grid-cols-2">
         <h2 className="text-base font-bold sm:col-span-2">{t("ot.trip")}</h2>
@@ -45,6 +47,9 @@ export function TripForm({ initial }: { initial?: TripFormValues }) {
         <label className="field">{t("ot.place")}<input name="place" className="input" defaultValue={initial?.place} required placeholder="Labuan Bajo, NTT" />{err("place")}</label>
         <label className="field">{t("ot.category")}
           <select name="category" className="input" defaultValue={initial?.category ?? "island"}>{CATEGORIES.map((c) => <option key={c} value={c}>{t(`cat.${c as "island"}`)}</option>)}</select>
+        </label>
+        <label className="field">{t("ot.photo")}
+          <select name="image" className="input" defaultValue={initial?.image ?? "beach"}>{PHOTO_CREDITS.map((p) => <option key={p.key} value={p.key}>{p.key}: {p.title.replace(/\.jpg$/, "").slice(0, 50)}</option>)}</select>
         </label>
         <label className="field">{t("ot.duration")}<input name="durationLabel" className="input uppercase" defaultValue={initial?.durationLabel} required placeholder="3D2N" />{err("durationLabel")}</label>
         <label className="field">{t("ot.price")}

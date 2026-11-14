@@ -45,7 +45,9 @@ Pure, unit-tested functions in `src/domain/`:
   cancellation fees; brand theme from the logo.
 - Phase 4b (bilingual): Indonesian and English throughout, with a language switch; placeholder-fee badges on demo Open Trips.
 - Phase 4c (invoicing): Finance spending report and CSV export, monthly invoices, ops billing and billing settings (PPN rate, fees, terms).
-- Next: the consumer site (Open Trip booking with the 30% down payment and cancellation fees).
+- Phase 5a (consumer Open Trips): browse, book with the 30% down payment and per-trip terms, My Trips, cancel with the
+  trip's fees; ops records payments and refunds.
+- Next: consumer flights, trains and hotels; a payment gateway.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).
@@ -61,6 +63,7 @@ Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `p
 | Hendra Wijaya | Manager (Operations Manager) | Andi Kurniawan | 0811 0000 0007 |
 | Fajar Nugroho | Employee (IT Engineer) | Hendra Wijaya | 0811 0000 0008 |
 | kitawisata Ops | Ops (back office, no company) | (none) | 0811 0000 0009 |
+| Dewi Anggraini | Consumer traveller, booking KW-DEMO26 | (none) | 0811 0000 0010 |
 
 The seed also loads the prototype's grade policies, cities and hotels, seven SPPDs with their approval
 chains and bookings, and six Open Trips. Dates are shifted so the demo always sits around today; set

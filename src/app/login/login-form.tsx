@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionForm } from "@/lib/use-action-form";
 import { loginAction, type LoginState } from "./actions";
 import { useI18n } from "@/i18n/client";
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const { t } = useI18n();
-  const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, { step: "phone" });
+  const [state, onSubmit, pending] = useActionForm<LoginState>(loginAction, { step: "phone" });
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <input type="hidden" name="callbackUrl" value={callbackUrl ?? ""} />
       {state.step === "phone" ? (
         <label className="field">{t("login.phone")}
