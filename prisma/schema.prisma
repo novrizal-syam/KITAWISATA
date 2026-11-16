@@ -447,15 +447,15 @@ enum InvoiceStatus {
 /// Monthly invoice from kitawisata to a company: travel bookings at cost, plus a service fee per
 /// booking and PPN on that fee. Archived invoices from before the platform have totals but no bookings.
 model Invoice {
-  id             String        @id @default(cuid())
+  id             String           @id @default(cuid())
   /// INV/KW/<year>/<month>/<seq>: the billing period, then a sequence shared by all companies.
-  number         String        @unique
+  number         String           @unique
   companyId      String
-  company        Company       @relation(fields: [companyId], references: [id])
+  company        Company          @relation(fields: [companyId], references: [id])
   periodYear     Int
   periodMonth    Int
-  issuedOn       DateTime      @db.Date
-  dueOn          DateTime      @db.Date
+  issuedOn       DateTime         @db.Date
+  dueOn          DateTime         @db.Date
   bookingCount   Int
   subtotal       Int
   feePerBooking  Int
@@ -464,11 +464,12 @@ model Invoice {
   ppnRateBps     Int
   ppn            Int
   total          Int
-  status         InvoiceStatus @default(ISSUED)
+  status         InvoiceStatus    @default(ISSUED)
   paidAt         DateTime?
   paidRecordedBy String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime         @default(now())
   bookings       TripBooking[]
+  attempts       PaymentAttempt[]
 
   @@index([companyId, periodYear, periodMonth])
 }
@@ -585,7 +586,7 @@ enum PaymentAttemptStatus {
   FAILED
 }
 
-/// One attempt to pay an Open Trip instalment or a ticket through Midtrans or Xendit.
+/// One attempt to pay an Open Trip instalment, a ticket, or a company invoice through Midtrans or Xendit.
 model PaymentAttempt {
   id                   String               @id @default(cuid())
   /// Our reference sent to the provider (Midtrans order_id / Xendit external_id). Unique per attempt.
@@ -601,6 +602,8 @@ model PaymentAttempt {
   openTripInstalment   OpenTripInstalment?  @relation(fields: [openTripInstalmentId], references: [id])
   ticketBookingId      String?
   ticketBooking        TicketBooking?       @relation(fields: [ticketBookingId], references: [id])
+  invoiceId            String?
+  invoice              Invoice?             @relation(fields: [invoiceId], references: [id])
   userId               String
   lastEvent            Json?
   note                 String?

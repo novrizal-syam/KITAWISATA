@@ -33,7 +33,7 @@ export default async function PaymentSettings() {
             <tbody>{unapplied.map((u) => (
               <tr key={u.id} className="border-t border-line align-top">
                 <td className="num py-2 pr-3 font-bold">{u.orderId}<div className="note font-normal">{u.provider} · {u.paidAt ? fmtDay(u.paidAt, locale) : ""}</div></td>
-                <td className="py-2 pr-3">{u.openTripInstalment?.booking.code ?? u.ticketBooking?.code}<div className="note">{u.note}</div></td>
+                <td className="py-2 pr-3">{u.openTripInstalment?.booking.code ?? u.ticketBooking?.code ?? u.invoice?.number}<div className="note">{u.note}</div></td>
                 <td className="num py-2 pr-3 text-right">{rp(u.amount)}</td>
                 <td className="py-2 text-right"><ResolveButton id={u.id} orderId={u.orderId} /></td>
               </tr>

@@ -6,7 +6,8 @@ import { AppError } from "@/lib/errors";
 import { normalisePhone } from "@/lib/otp";
 import { parseDate, todayInJakarta } from "@/domain/dates";
 import { bookingCode } from "@/domain/openTripBooking";
-import { checkSearch, flightOffers, stayOffers, trainOffers, type SearchError, type StayOffer, type TicketKind, type TravelOffer } from "@/domain/tickets";
+import { checkSearch, type SearchError, type StayOffer, type TicketKind, type TravelOffer } from "@/domain/tickets";
+import { supplierFor } from "./suppliers";
 import { platformSettings } from "./billingService";
 
 export class TicketError extends AppError {}
@@ -21,10 +22,14 @@ export function readSearch(kind: TicketKind, v: Record<string, string | undefine
   return { search, error: checkSearch(kind, search, today) };
 }
 
-export function offersFor(s: TicketSearch): (TravelOffer | StayOffer)[] {
-  if (s.kind === "FLIGHT") return flightOffers(s.from!, s.to!, s.date, s.pax);
-  if (s.kind === "TRAIN") return trainOffers(s.from!, s.to!, s.date, s.pax);
-  return stayOffers(s.city!, s.nights!, s.pax);
+/** Offers from the supplier serving this kind (src/server/suppliers). */
+export async function offersFor(s: TicketSearch): Promise<(TravelOffer | StayOffer)[]> {
+  return supplierFor(s.kind).search(s);
+}
+
+/** The supplier's current price and availability for one offer, or null if it's gone. */
+export async function repriceOffer(s: TicketSearch, offerId: string) {
+  return supplierFor(s.kind).reprice(s, offerId);
 }
 
 export const ticketInput = z.object({
@@ -42,7 +47,7 @@ export async function createTicketBooking(userId: string, kind: TicketKind, raw:
   if (input.travellerNames.length !== names) throw new TicketError("err.travellerCount");
   const phone = normalisePhone(input.contactPhone);
   if (!phone) throw new TicketError("login.badPhone");
-  const offer = offersFor(search).find((o) => o.id === input.offerId);
+  const offer = await repriceOffer(search, input.offerId);
   if (!offer) throw new TicketError("err.optionGone");
   const settings = await platformSettings();
   let code = bookingCode(randomInt).replace("KW-", "KT-");

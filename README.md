@@ -53,7 +53,8 @@ Pure, unit-tested functions in `src/domain/`:
 - Phase 5b (payment settings): bank transfer details shown to customers; Midtrans/Xendit keys stored encrypted with a connection test.
 - Phase 5c (tickets and stays): flight, train and stay search on a sample catalogue, paid in full, issued by ops with a reference.
 - Phase 6 (online payment): Pay now through Midtrans Snap or Xendit Invoices, verified notifications, late-payment review.
-- Next: run against the real sandboxes; connect real suppliers; corporate invoices online.
+- Phase 7: companies pay invoices online; supplier interface for flights, trains and stays (sample catalogue as the first supplier, see `docs/suppliers.md`).
+- Next: real sandbox runs for Midtrans and Xendit; adapters for the chosen suppliers.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).
