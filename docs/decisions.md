@@ -114,18 +114,29 @@ item has a booking. The budget check always counts what is already booked and re
 - **Seats:** taken atomically, so a departure can't be overbooked, and returned when a booking is cancelled or its hold lapses.
 - **Payment plan:** 30/35/35, or 30/70 within 30 days, or in full. Splitting isn't offered within 14 days of departure.
 
-**Payments (to confirm):**
+**Payments:**
 - No payment gateway is connected yet, and nothing pretends to take a payment. The traveller sees the amount, due date and booking code to quote on a bank transfer.
 - kitawisata ops records each payment on **Trip bookings** (`/portal/trip-bookings`). The first payment confirms the booking; the last makes it fully paid.
-- **Seat hold:** an unpaid hold keeps its seats for a time ops sets in Billing settings. The default is **24 hours**, because payments are confirmed by hand. The prototype's 30 minutes only works once a gateway confirms automatically.
+- **Seat hold (confirmed 2026-11-16):** an unpaid hold keeps its seats for a time ops sets in Billing settings. The default is **24 hours**, because payments are confirmed by hand. The prototype's 30 minutes only works once a gateway confirms automatically.
 
-**Cancellation (to confirm):**
+**Cancellation:**
 - The fee comes from the booking's own terms snapshot, as a share of the total.
-- kitawisata keeps the fee but **never more than was paid, and charges nothing more**. For example, a 50% fee with only the 30% down payment paid means no refund and no further charge.
+- **Confirmed 2026-11-16:** kitawisata keeps the fee but **never more than was paid, and charges nothing more**. For example, a 50% fee with only the 30% down payment paid means no refund and no further charge.
 - An unpaid hold cancels free.
 - A refund owed is tracked until ops marks it sent.
 
 **Also fixed:** React 19 cleared typed form fields whenever the server returned an error, for example contact and traveller names. All forms where people type now keep their values (`src/lib/use-action-form.ts`).
+
+## 11. Payment gateway connection is a setting
+**Decision (2026-11-16):** "make these connection later on setting for payment gateway".
+
+**Build:** ops configures payments on **Payment settings** (`/portal/payments`):
+- **Provider:** bank transfer (default), Midtrans or Xendit, with a sandbox/production mode.
+- **Bank transfer details** (bank, account number, holder): once set, they appear in travellers' "how to pay" and on company invoices.
+- **Gateway keys:** write-only. They're encrypted before saving with AES-256-GCM (`src/server/secretBox.ts`), keyed from `PAYMENT_SECRETS_KEY` or else `AUTH_SECRET`. They're never sent back to the browser; only "••••last4" hints are. A blank field keeps the saved key.
+- **Test connection:** a read-only call. For Midtrans, a status lookup of an unknown order; for Xendit, `/balance`. It also flags a key that belongs to the other mode.
+
+**Not built yet:** taking payments through the gateway, meaning checkout redirect or Snap, payment notifications (webhooks) and automatic confirmation. It needs a sandbox account and network access to the provider. Once it's in, the seat hold can drop to about 30 minutes. Until then, customers pay by bank transfer and ops records payments.
 
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.

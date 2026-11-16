@@ -20,6 +20,9 @@ pnpm dev                      # http://localhost:3000
 
 In development, OTP codes are printed to the server console (`[otp] +62... -> 123456`).
 
+Payment gateway keys entered on Payment settings are encrypted with `PAYMENT_SECRETS_KEY` (or, if unset,
+with a key derived from `AUTH_SECRET`). Changing that secret makes saved keys unreadable; enter them again.
+
 ## Prototypes and decisions
 - `prototype/`: the reference prototypes with photos (see `prototype/README.md`).
 - `docs/decisions.md`: answers to the kickoff questions and how the build applies them.
@@ -47,7 +50,8 @@ Pure, unit-tested functions in `src/domain/`:
 - Phase 4c (invoicing): Finance spending report and CSV export, monthly invoices, ops billing and billing settings (PPN rate, fees, terms).
 - Phase 5a (consumer Open Trips): browse, book with the 30% down payment and per-trip terms, My Trips, cancel with the
   trip's fees; ops records payments and refunds.
-- Next: consumer flights, trains and hotels; a payment gateway.
+- Phase 5b (payment settings): bank transfer details shown to customers; Midtrans/Xendit keys stored encrypted with a connection test.
+- Next: consumer flights, trains and hotels; taking payments through the gateway.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).

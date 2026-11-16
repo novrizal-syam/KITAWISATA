@@ -8,6 +8,7 @@ import { invoiceForViewer } from "@/server/billingService";
 import { getT } from "@/i18n/server";
 import { fmtDate, fmtDay, fmtPct, periodLabel, rp } from "@/lib/format";
 import { InvoiceStatus } from "../../_components/invoice-bits";
+import { bankTransferDetails } from "@/server/paymentSettingsService";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,6 +17,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const inv = me && (await invoiceForViewer(id, me));
   if (!inv) notFound();
   const { t, locale } = await getT();
+  const bank = await bankTransferDetails();
   const byCc = new Map<string, typeof inv.bookings>();
   for (const b of inv.bookings) {
     const cc = b.sppd.employee.costCentre ?? "-";
@@ -69,7 +71,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <div className="mt-6 rounded-xl bg-ground p-4 text-[13px]">
           {inv.status === "PAID"
             ? <p>{t("inv.paidOn", { date: fmtDay(inv.paidAt!, locale), name: inv.paidRecordedBy ?? "kitawisata" })}</p>
-            : <><b>{t("inv.howToPay")}</b><p className="text-muted">{t("inv.howToPayBody", { date: fmtDate(inv.dueOn, locale), number: inv.number })}</p></>}
+            : <><b>{t("inv.howToPay")}</b><p className="text-muted">{t("inv.howToPayBody", { date: fmtDate(inv.dueOn, locale), number: inv.number })}</p>
+              {bank && <p className="mt-2">{t("pay.toAccount", { bank: bank.bank, number: bank.number, holder: bank.holder })}</p>}</>}
         </div>
       </article>
     </div>
