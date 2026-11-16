@@ -18,6 +18,19 @@ export default async function Home() {
           <Link href="#trips" className="btn btn-red mt-6">{t("site.heroCta")}</Link>
         </div>
       </section>
+      <section className="mx-auto max-w-6xl px-4 pt-8">
+        <h2 className="mb-3 text-2xl font-bold">{t("site.bookRest")}</h2>
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {([["flights", "plane", "site.flights", "site.flightsSub"], ["trains", "train", "site.trains", "site.trainsSub"], ["stays", "resort", "site.stays", "site.staysSub"]] as const).map(([slug, img, title, sub]) => (
+            <li key={slug}>
+              <Link href={`/travel/${slug}`} className="card flex items-center gap-3 overflow-hidden hover:border-line2">
+                <Image src={`/img/${img}-sm.jpg`} alt="" width={120} height={80} className="h-20 w-28 object-cover" />
+                <span><b className="block">{t(title)}</b><span className="note">{t(sub)}</span></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
       <section id="trips" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10">
         <h2 className="mb-1 text-2xl font-bold">{t("site.tripsTitle")}</h2>
         <p className="mb-5 text-muted">{t("site.tripsBody")}</p>

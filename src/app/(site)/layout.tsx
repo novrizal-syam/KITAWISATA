@@ -12,8 +12,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <header className="sticky top-0 z-20 border-b border-line bg-white">
         <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
           <Link href="/" aria-label="kitawisata"><Image src="/logo.png" alt="kitawisata" width={140} height={28} priority /></Link>
-          <nav className="flex gap-5 font-semibold" aria-label={t("site.nav")}>
+          <nav className="flex flex-wrap gap-x-5 gap-y-1 font-semibold" aria-label={t("site.nav")}>
             <Link href="/#trips" className="hover:text-red">{t("site.openTrip")}</Link>
+            <Link href="/travel/flights" className="hover:text-red">{t("site.flights")}</Link>
+            <Link href="/travel/trains" className="hover:text-red">{t("site.trains")}</Link>
+            <Link href="/travel/stays" className="hover:text-red">{t("site.stays")}</Link>
             <Link href="/portal" className="hover:text-red">{t("site.business")}</Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">

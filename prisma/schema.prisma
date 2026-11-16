@@ -83,6 +83,7 @@ model User {
   approvalSteps     ApprovalStep[]
   exceptionsDecided PolicyException[]
   openTripBookings  OpenTripBooking[]
+  ticketBookings    TicketBooking[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 }
@@ -517,4 +518,55 @@ model PaymentSetting {
   lastTestMessage   String?
   updatedAt         DateTime        @updatedAt
   updatedBy         String?
+}
+
+// ---------- Consumer tickets and stays ----------
+
+enum TicketKind {
+  FLIGHT
+  TRAIN
+  STAY
+}
+
+enum TicketStatus {
+  AWAITING_PAYMENT // created; paid in full before the deadline (holdExpiresAt)
+  PAID // payment received; ops issues the ticket or voucher
+  ISSUED // ticket/voucher reference recorded
+  CANCELLED // cancelled before payment, or not issuable (then refunded)
+  EXPIRED // not paid in time
+}
+
+/// A flight, train or stay booked on the consumer site. Paid in full. Until a supplier is connected,
+/// ops issues the ticket or voucher and records its reference. `offer` is the priced offer as booked.
+model TicketBooking {
+  id             String       @id @default(cuid())
+  code           String       @unique
+  kind           TicketKind
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  /// The search the offer came from and the offer itself (src/domain/tickets.ts).
+  search         Json
+  offer          Json
+  travelDate     DateTime     @db.Date
+  pax            Int
+  total          Int
+  contactName    String
+  contactPhone   String
+  travellerNames String[]
+  status         TicketStatus @default(AWAITING_PAYMENT)
+  holdExpiresAt  DateTime
+  paidAt         DateTime?
+  paidRecordedBy String?
+  issuedRef      String?
+  issuedAt       DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  refundAmount   Int?
+  refundStatus   RefundStatus @default(NONE)
+  refundedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+
+  @@index([userId])
+  @@index([status, holdExpiresAt])
 }

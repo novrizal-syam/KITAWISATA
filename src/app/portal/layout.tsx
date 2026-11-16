@@ -51,6 +51,7 @@ export default async function PortalLayout({ children }: { children: React.React
             {ops ? <>
               <NavLink href="/portal/open-trips" label={t("nav.openTrips")} />
               <NavLink href="/portal/trip-bookings" label={t("nav.tripBookings")} />
+              <NavLink href="/portal/ticket-bookings" label={t("nav.ticketBookings")} />
               <NavLink href="/portal/billing" label={t("nav.billing")} exact />
               <NavLink href="/portal/billing/settings" label={t("nav.billingSettings")} />
               <NavLink href="/portal/payments" label={t("nav.payments")} />

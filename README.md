@@ -51,7 +51,8 @@ Pure, unit-tested functions in `src/domain/`:
 - Phase 5a (consumer Open Trips): browse, book with the 30% down payment and per-trip terms, My Trips, cancel with the
   trip's fees; ops records payments and refunds.
 - Phase 5b (payment settings): bank transfer details shown to customers; Midtrans/Xendit keys stored encrypted with a connection test.
-- Next: consumer flights, trains and hotels; taking payments through the gateway.
+- Phase 5c (tickets and stays): flight, train and stay search on a sample catalogue, paid in full, issued by ops with a reference.
+- Next: taking payments through the gateway (Midtrans or Xendit); connecting real suppliers.
 
 ## Demo users (seed)
 Demo company: PT Nusantara Trading Indonesia (people and reporting lines from `prototype/business/`).

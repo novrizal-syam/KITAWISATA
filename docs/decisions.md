@@ -138,5 +138,15 @@ item has a booking. The budget check always counts what is already booked and re
 
 **Not built yet:** taking payments through the gateway, meaning checkout redirect or Snap, payment notifications (webhooks) and automatic confirmation. It needs a sandbox account and network access to the provider. Once it's in, the seat hold can drop to about 30 minutes. Until then, customers pay by bank transfer and ops records payments.
 
+## 12. Flights, trains and stays on the consumer site
+**Build:**
+- **Search and results** (`/travel/flights`, `/travel/trains`, `/travel/stays`), then checkout (sign-in required), then **My Trips**, which lists tickets alongside Open Trips.
+- **Inventory:** no airline, rail or hotel supplier is connected, so offers come from a deterministic **sample catalogue** ported from the prototype (`src/domain/tickets.ts`), with placeholder carriers such as "[Airline A]". The pages say so.
+- **Pricing:** the server re-prices the chosen offer from the search plus the offer id; the browser never sends a price.
+- **Payment:** paid in full by bank transfer (gateway next), due before the hold time in Billing settings. Unpaid bookings lapse, and travellers can cancel free before paying.
+- **Fulfilment by ops** (**Tickets & stays**, `/portal/ticket-bookings`): record the payment, then issue with the ticket/PNR or voucher reference, which the traveller sees. If it can't be issued, ops cancels it and a **full refund** is owed, as the prototype promised, then marks the refund sent.
+
+**Next:** take payments through the gateway, then connect real suppliers.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
