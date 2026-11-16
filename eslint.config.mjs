@@ -12,6 +12,10 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    // Parameters prefixed with _ are intentionally unused (e.g. a server action's previous state).
+    rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }] },
+  },
+  {
     ignores: [
       "src/generated/**",
       "node_modules/**",

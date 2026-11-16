@@ -53,6 +53,7 @@ export default async function PortalLayout({ children }: { children: React.React
               <NavLink href="/portal/trip-bookings" label={t("nav.tripBookings")} />
               <NavLink href="/portal/billing" label={t("nav.billing")} exact />
               <NavLink href="/portal/billing/settings" label={t("nav.billingSettings")} />
+              <NavLink href="/portal/payments" label={t("nav.payments")} />
             </> : <>
             {approver && <NavLink href="/portal/approvals" label={t("nav.approvals")} count={pending} />}
             <NavLink href="/portal/trips" label={t("nav.myTravel")} exact />

@@ -487,3 +487,34 @@ model PlatformSetting {
   updatedAt       DateTime @updatedAt
   updatedBy       String?
 }
+
+// ---------- Payment provider settings (ops) ----------
+
+enum PaymentProvider {
+  MANUAL_TRANSFER // bank transfer, confirmed by ops
+  MIDTRANS
+  XENDIT
+}
+
+enum PaymentMode {
+  SANDBOX
+  PRODUCTION
+}
+
+/// How customers pay, one row (id "default"). Gateway keys are stored encrypted (src/server/secretBox.ts)
+/// and never sent back to the browser; `secretHints` keeps only the last 4 characters of each.
+model PaymentSetting {
+  id                String          @id @default("default")
+  provider          PaymentProvider @default(MANUAL_TRANSFER)
+  mode              PaymentMode     @default(SANDBOX)
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountHolder String?
+  secretsEnc        String?
+  secretHints       Json?
+  lastTestAt        DateTime?
+  lastTestOk        Boolean?
+  lastTestMessage   String?
+  updatedAt         DateTime        @updatedAt
+  updatedBy         String?
+}
