@@ -2,13 +2,14 @@ import "server-only";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors";
+import { getOrCreate } from "./singleton";
 import { dueDate, invoiceNumber, invoiceTotals, jakartaMonthRange, monthOf, periodKey, previousMonth } from "@/domain/invoice";
 import { todayInJakarta } from "@/domain/dates";
 
 export class BillingError extends AppError {}
 
 export async function platformSettings() {
-  return db.platformSetting.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  return getOrCreate(() => db.platformSetting.findUnique({ where: { id: "default" } }), () => db.platformSetting.create({ data: { id: "default" } }));
 }
 
 const percent = z.preprocess(
