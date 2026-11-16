@@ -6,16 +6,19 @@ import { getT } from "@/i18n/server";
 import { myTripBookings } from "@/server/openTripBookingService";
 import { paidAmount } from "@/domain/openTripBooking";
 import { fmtDate, rp } from "@/lib/format";
-import { BookingBadge } from "../_components/booking-bits";
+import { BookingBadge, TicketBadge } from "../_components/booking-bits";
+import { myTicketBookings, type TicketSearch } from "@/server/ticketService";
+import { offerLines } from "../travel/offer-summary";
+import type { StayOffer, TravelOffer } from "@/domain/tickets";
 
 export default async function MyTrips() {
   const session = await auth();
   if (!session) redirect("/login?callbackUrl=/my-trips");
-  const [{ t, locale }, bookings] = await Promise.all([getT(), myTripBookings(session.user.id)]);
+  const [{ t, locale }, bookings, tickets] = await Promise.all([getT(), myTripBookings(session.user.id), myTicketBookings(session.user.id)]);
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-5 text-2xl font-bold">{t("site.myTrips")}</h1>
-      {bookings.length === 0 ? (
+      {bookings.length === 0 && tickets.length === 0 ? (
         <div className="card p-6"><p className="text-muted">{t("my.none")}</p><Link href="/#trips" className="btn btn-red mt-4">{t("site.heroCta")}</Link></div>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -31,6 +34,18 @@ export default async function MyTrips() {
               </Link>
             </li>
           ))}
+          {tickets.map((b) => {
+            const { title, lines } = offerLines(b.search as unknown as TicketSearch, b.offer as unknown as TravelOffer | StayOffer, t, locale);
+            return (
+              <li key={b.id}>
+                <Link href={`/my-trips/tickets/${b.code}`} className="card flex flex-col gap-1 p-4 hover:border-line2">
+                  <span className="flex flex-wrap items-center gap-2"><span className="badge bg-grey-t text-muted">{t(`tk.kind.${b.kind}`)}</span><b className="text-[16px]">{title}</b><TicketBadge status={b.status} t={t} /></span>
+                  <span className="note">{b.code} · {lines[0]}</span>
+                  <span className="num text-[14px]">{rp(b.total)}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </main>
