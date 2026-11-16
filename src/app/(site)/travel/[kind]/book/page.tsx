@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getT } from "@/i18n/server";
-import { offersFor, readSearch } from "@/server/ticketService";
+import { readSearch, repriceOffer } from "@/server/ticketService";
 import { KIND_BY_SLUG, searchQuery } from "../../kinds";
 import { PriceLines, offerLines } from "../../offer-summary";
 import { TicketBookForm } from "./form";
@@ -17,7 +17,7 @@ export default async function BookTicket({ params, searchParams }: { params: Pro
   const here = `/travel/${slug}/book?${new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][])}`;
   if (!session) redirect(`/login?callbackUrl=${encodeURIComponent(here)}`);
   const { search, error } = readSearch(kind, sp);
-  const offer = error ? null : offersFor(search).find((o) => o.id === sp.offer);
+  const offer = error ? null : await repriceOffer(search, sp.offer ?? "");
   if (!offer) notFound();
   const [{ t, locale }, me] = await Promise.all([getT(), db.user.findUnique({ where: { id: session.user.id }, select: { name: true, phone: true } })]);
   const { title, lines } = offerLines(search, offer, t, locale);

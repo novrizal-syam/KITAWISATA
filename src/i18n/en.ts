@@ -694,6 +694,7 @@ export const en = {
   "err.gatewayOff": "Online payment isn't available right now. Please pay by bank transfer.",
   "err.gatewayDown": "The payment provider didn't respond. Please try again in a moment, or pay by bank transfer.",
   "err.unknownPayment": "Unknown payment",
+  "err.notYourInvoice": "Only your company's Finance admins can pay this invoice",
 } as const;
 
 export type MessageKey = keyof typeof en;

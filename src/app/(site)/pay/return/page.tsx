@@ -18,7 +18,8 @@ export default async function PayReturn({ searchParams }: { searchParams: Promis
   try {
     const r = await confirmAttempt(order);
     outcome = r.outcome;
-    href = r.attempt.tripCode ? `/my-trips/${r.attempt.tripCode}` : r.attempt.ticketCode ? `/my-trips/tickets/${r.attempt.ticketCode}` : "/my-trips";
+    href = r.attempt.tripCode ? `/my-trips/${r.attempt.tripCode}` : r.attempt.ticketCode ? `/my-trips/tickets/${r.attempt.ticketCode}`
+      : r.attempt.invoiceId ? `/portal/invoices/${r.attempt.invoiceId}` : "/my-trips";
   } catch { outcome = "pending"; }
   const ok = outcome === "paid" || outcome === "already";
   return (

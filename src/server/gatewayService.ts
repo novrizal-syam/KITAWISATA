@@ -75,6 +75,23 @@ export async function startTicketPayment(userId: string, code: string) {
   return created.redirectUrl;
 }
 
+/** Finance pays its company's unpaid invoice in full. The payment page stays open until the due date (1 hour to 7 days). */
+export async function startInvoicePayment(userId: string, invoiceId: string) {
+  const c = await gatewayReady();
+  if (!c) throw new GatewayPaymentError("err.gatewayOff");
+  const [me, inv] = await Promise.all([db.user.findUnique({ where: { id: userId } }), db.invoice.findUnique({ where: { id: invoiceId }, include: { company: true } })]);
+  if (!me || me.role !== "FINANCE_ADMIN" || !inv || inv.companyId !== me.companyId) throw new GatewayPaymentError("err.notYourInvoice");
+  if (inv.status !== "ISSUED") throw new GatewayPaymentError("err.alreadyPaid");
+  const orderId = `${inv.number.replaceAll("/", "-")}-${suffix()}`;
+  const untilDue = Math.floor((inv.dueOn.getTime() + 86_400_000 - Date.now()) / 60_000);
+  const created = await createAtProvider(c, {
+    orderId, amount: inv.total, name: inv.company.name, phone: me.phone, item: `kitawisata invoice ${inv.number}`,
+    returnPath: `/portal/invoices/${inv.id}`, expiryMinutes: Math.min(7 * 24 * 60, Math.max(60, untilDue)),
+  });
+  await db.paymentAttempt.create({ data: { orderId, provider: c.provider, mode: c.mode, amount: inv.total, providerRef: created.providerRef, redirectUrl: created.redirectUrl, invoiceId: inv.id, userId } });
+  return created.redirectUrl;
+}
+
 /** Ask the provider for the attempt's real status. */
 async function providerStatus(a: { provider: string; mode: "SANDBOX" | "PRODUCTION"; orderId: string; providerRef: string | null }): Promise<GatewayStatus> {
   const c = await gatewayConfig();
@@ -88,10 +105,10 @@ export type ConfirmOutcome = "paid" | "unapplied" | "pending" | "expired" | "fai
  * Confirm an attempt with the provider and, if paid, record it on the booking exactly once.
  * Used by webhooks and by the return page. Money that can't be applied is kept for ops to review.
  */
-export async function confirmAttempt(orderId: string, event?: unknown): Promise<{ outcome: ConfirmOutcome; attempt: { orderId: string; ticketCode?: string; tripCode?: string } }> {
+export async function confirmAttempt(orderId: string, event?: unknown): Promise<{ outcome: ConfirmOutcome; attempt: { orderId: string; ticketCode?: string; tripCode?: string; invoiceId?: string } }> {
   const a = await db.paymentAttempt.findUnique({ where: { orderId }, include: { openTripInstalment: { include: { booking: true } }, ticketBooking: true } });
   if (!a) throw new GatewayPaymentError("err.unknownPayment");
-  const ref = { orderId, ticketCode: a.ticketBooking?.code, tripCode: a.openTripInstalment?.booking.code };
+  const ref = { orderId, ticketCode: a.ticketBooking?.code, tripCode: a.openTripInstalment?.booking.code, invoiceId: a.invoiceId ?? undefined };
   // Already settled (often the webhook arrived before the customer came back): report what was recorded.
   if (a.status !== "PENDING") {
     const recorded = { PAID: "already", PAID_UNAPPLIED: "unapplied", EXPIRED: "expired", FAILED: "failed" } as const;
@@ -121,6 +138,10 @@ export async function confirmAttempt(orderId: string, event?: unknown): Promise<
       await tx.openTripBooking.update({ where: { id: inst.bookingId }, data: { status: statusAfterPayment(after) } });
       return "paid" as const;
     }
+    if (a.invoiceId) {
+      const r = await tx.invoice.updateMany({ where: { id: a.invoiceId, status: "ISSUED" }, data: { status: "PAID", paidAt: new Date(), paidRecordedBy: recorder } });
+      return r.count === 1 ? ("paid" as const) : unapplied("invoice already paid");
+    }
     const r = await tx.ticketBooking.updateMany({ where: { id: a.ticketBookingId!, status: "AWAITING_PAYMENT" }, data: { status: "PAID", paidAt: new Date(), paidRecordedBy: recorder } });
     return r.count === 1 ? ("paid" as const) : unapplied("ticket no longer awaiting payment");
   });
@@ -148,7 +169,7 @@ export async function handleXenditCallback(token: string | null, body: Record<st
 // ---------- ops ----------
 
 export async function unappliedPayments() {
-  return db.paymentAttempt.findMany({ where: { status: "PAID_UNAPPLIED", resolvedAt: null }, include: { openTripInstalment: { include: { booking: true } }, ticketBooking: true }, orderBy: { paidAt: "desc" } });
+  return db.paymentAttempt.findMany({ where: { status: "PAID_UNAPPLIED", resolvedAt: null }, include: { openTripInstalment: { include: { booking: true } }, ticketBooking: true, invoice: true }, orderBy: { paidAt: "desc" } });
 }
 
 export async function resolveUnapplied(opsUserId: string, id: string) {

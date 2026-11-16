@@ -6,6 +6,7 @@ import type { MessageKey, T } from "@/i18n";
 import { AIRPORTS, MAX_NIGHTS, MAX_PASSENGERS, STATIONS, STAY_CITIES, type StayOffer, type TravelOffer } from "@/domain/tickets";
 import { addDays, parseDate, toIsoDate, todayInJakarta } from "@/domain/dates";
 import { offersFor, readSearch } from "@/server/ticketService";
+import { isSample } from "@/server/suppliers";
 import { fmtDate, rp } from "@/lib/format";
 import { BANNER, KIND_BY_SLUG, searchQuery } from "../kinds";
 
@@ -21,7 +22,8 @@ export default async function TravelSearch({ params, searchParams }: { params: P
   const searched = Boolean(sp.date);
   const values = { ...defaults, ...Object.fromEntries(Object.entries(sp).filter(([, v]) => v)) };
   const { search, error } = readSearch(kind, values, today);
-  const offers = searched && !error ? offersFor(search) : [];
+  const offers = searched && !error ? await offersFor(search) : [];
+  const sample = isSample(kind);
   const places = kind === "FLIGHT" ? AIRPORTS.map((a) => [a.code, `${a.city} (${a.code})`]) : STATIONS.map((s) => [s.code, s.name]);
   const placeName = (c?: string) => places.find(([code]) => code === c)?.[1] ?? c;
   const k = kind.toLowerCase() as "flight" | "train" | "stay";
@@ -34,7 +36,7 @@ export default async function TravelSearch({ params, searchParams }: { params: P
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink/80 to-ink/20" />
         <div className="px-6 py-10 text-white"><p className="text-xs font-extrabold tracking-[.08em] uppercase">{t(`tk.${k}.eyebrow`)}</p><h1 className="mt-2 text-3xl font-extrabold">{t(`tk.${k}.title`)}</h1></div>
       </section>
-      <p className="rounded-xl bg-amber-t px-4 py-2.5 text-[13.5px] font-semibold text-amber">{t("tk.sample")}</p>
+      {sample && <p className="rounded-xl bg-amber-t px-4 py-2.5 text-[13.5px] font-semibold text-amber">{t("tk.sample")}</p>}
 
       <form className="card flex flex-wrap items-end gap-3 p-4" method="get">
         {kind === "STAY" ? (

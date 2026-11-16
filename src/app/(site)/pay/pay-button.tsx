@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { payOnlineAction, type PayState } from "./actions";
 import { useI18n } from "@/i18n/client";
 
-export function PayOnlineButton({ code, kind, label }: { code: string; kind: "trip" | "ticket"; label: string }) {
+export function PayOnlineButton({ code, kind, label }: { code: string; kind: "trip" | "ticket" | "invoice"; label: string }) {
   const { t } = useI18n();
   const [state, action, pending] = useActionState<PayState, FormData>(payOnlineAction, {});
   return (

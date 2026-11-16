@@ -9,6 +9,8 @@ import { getT } from "@/i18n/server";
 import { fmtDate, fmtDay, fmtPct, periodLabel, rp } from "@/lib/format";
 import { InvoiceStatus } from "../../_components/invoice-bits";
 import { bankTransferDetails } from "@/server/paymentSettingsService";
+import { gatewayReady } from "@/server/gatewayService";
+import { PayOnlineButton } from "../../../(site)/pay/pay-button";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,7 +19,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const inv = me && (await invoiceForViewer(id, me));
   if (!inv) notFound();
   const { t, locale } = await getT();
-  const bank = await bankTransferDetails();
+  const [bank, online] = await Promise.all([bankTransferDetails(), gatewayReady()]);
+  const canPayOnline = online && inv.status === "ISSUED" && me!.role === "FINANCE_ADMIN";
   const byCc = new Map<string, typeof inv.bookings>();
   for (const b of inv.bookings) {
     const cc = b.sppd.employee.costCentre ?? "-";
@@ -71,7 +74,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <div className="mt-6 rounded-xl bg-ground p-4 text-[13px]">
           {inv.status === "PAID"
             ? <p>{t("inv.paidOn", { date: fmtDay(inv.paidAt!, locale), name: inv.paidRecordedBy ?? "kitawisata" })}</p>
-            : <><b>{t("inv.howToPay")}</b><p className="text-muted">{t("inv.howToPayBody", { date: fmtDate(inv.dueOn, locale), number: inv.number })}</p>
+            : <>{canPayOnline && <div className="mb-4"><PayOnlineButton code={inv.id} kind="invoice" label={t("ret.payNow", { amount: rp(inv.total) })} /></div>}
+              <b>{canPayOnline ? t("ret.orTransfer") : t("inv.howToPay")}</b><p className="text-muted">{t("inv.howToPayBody", { date: fmtDate(inv.dueOn, locale), number: inv.number })}</p>
               {bank && <p className="mt-2">{t("pay.toAccount", { bank: bank.bank, number: bank.number, holder: bank.holder })}</p>}</>}
         </div>
       </article>

@@ -1,6 +1,7 @@
-# Gateway end-to-end test
+# Gateway end-to-end tests
 
-Checks online payment (Midtrans and Xendit) end to end against `mock-gateway.js`, a local stand-in that
+`gateway.e2e.js` checks online payment for bookings (Midtrans and Xendit) and `invoice-pay.e2e.js` checks
+companies paying invoices, end to end, against `mock-gateway.js`, a local stand-in that
 implements the provider calls the app makes, a payment page, and the signed notifications each provider sends.
 It does not replace a run against the real sandboxes (see `docs/decisions.md` §13).
 
@@ -13,4 +14,6 @@ AUTH_TRUST_HOST=true APP_URL=http://localhost:3000 MIDTRANS_SNAP_BASE=http://loc
   MIDTRANS_API_BASE=http://localhost:4010 XENDIT_API_BASE=http://localhost:4010 pnpm start > server.log 2>&1 &
 # 3. the test (Playwright; resets nothing, so start from a fresh seed)
 node e2e/gateway.e2e.js server.log /tmp
+# reseed before the next one (OTP resend limit: wait a minute between runs)
+node e2e/invoice-pay.e2e.js server.log
 ```

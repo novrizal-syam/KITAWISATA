@@ -169,5 +169,17 @@ item has a booking. The budget check always counts what is already booked and re
 
 Then lower the seat hold to about 30 minutes in Billing settings.
 
+## 14. Companies pay invoices online
+**Build:** when online payment is on, the billed company's finance admins see **Pay now** on an unpaid invoice. The full amount goes through the same gateway flow (§13), and the payment page stays open until the due date, at least an hour and at most 7 days. The invoice is marked paid "by Midtrans/Xendit".
+
+A second payment for an invoice that's already paid is kept as **needs review**, never applied twice. Only that company's finance admins can start the payment, so a traveller can't pay an invoice by tampering with a form. Bank transfer stays as the fallback. End-to-end test: `e2e/invoice-pay.e2e.js`.
+
+## 15. Real inventory suppliers
+**Decision (2026-11-16):** "connect real suppliers".
+
+**Build:** a supplier interface (`src/server/suppliers`) with `search`, `reprice` (confirms the live price before booking; the booking uses this price) and an optional `issue`. The sample catalogue is the first supplier. `SUPPLIER_FLIGHT`, `SUPPLIER_TRAIN` and `SUPPLIER_STAY` choose one per kind, and the "sample prices" notice shows only while a kind is served by the sample. `docs/suppliers.md` explains how to add a real one.
+
+**To decide:** which suppliers kitawisata contracts with for flights, trains and stays. Each needs an agreement, sandbox keys and network access before its adapter can be built and tested.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.

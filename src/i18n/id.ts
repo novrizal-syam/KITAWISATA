@@ -682,4 +682,5 @@ export const id: Record<MessageKey, string> = {
   "err.gatewayOff": "Pembayaran online sedang tidak tersedia. Silakan bayar dengan transfer bank.",
   "err.gatewayDown": "Penyedia pembayaran tidak merespons. Coba lagi sebentar lagi, atau bayar dengan transfer bank.",
   "err.unknownPayment": "Pembayaran tidak dikenal",
+  "err.notYourInvoice": "Hanya admin Finance perusahaan Anda yang bisa membayar tagihan ini",
 };
