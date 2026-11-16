@@ -386,6 +386,8 @@ model OpenTripInstalment {
   paidAt         DateTime?
   paidRecordedBy String?
 
+  attempts PaymentAttempt[]
+
   @@unique([bookingId, seq])
 }
 
@@ -567,6 +569,47 @@ model TicketBooking {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
 
+  attempts PaymentAttempt[]
+
   @@index([userId])
   @@index([status, holdExpiresAt])
+}
+
+// ---------- Gateway payments ----------
+
+enum PaymentAttemptStatus {
+  PENDING // created at the provider, waiting for the customer
+  PAID // confirmed by the provider and applied to the booking
+  PAID_UNAPPLIED // money arrived but the booking could no longer take it (e.g. hold lapsed): ops reviews
+  EXPIRED
+  FAILED
+}
+
+/// One attempt to pay an Open Trip instalment or a ticket through Midtrans or Xendit.
+model PaymentAttempt {
+  id                   String               @id @default(cuid())
+  /// Our reference sent to the provider (Midtrans order_id / Xendit external_id). Unique per attempt.
+  orderId              String               @unique
+  provider             PaymentProvider
+  mode                 PaymentMode
+  amount               Int
+  status               PaymentAttemptStatus @default(PENDING)
+  /// Midtrans Snap token or Xendit invoice id.
+  providerRef          String?
+  redirectUrl          String?
+  openTripInstalmentId String?
+  openTripInstalment   OpenTripInstalment?  @relation(fields: [openTripInstalmentId], references: [id])
+  ticketBookingId      String?
+  ticketBooking        TicketBooking?       @relation(fields: [ticketBookingId], references: [id])
+  userId               String
+  lastEvent            Json?
+  note                 String?
+  /// For PAID_UNAPPLIED: when ops resolved it (refunded or applied by hand), and who.
+  resolvedAt           DateTime?
+  resolvedBy           String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @default(now()) @updatedAt
+  paidAt               DateTime?
+
+  @@index([status])
 }

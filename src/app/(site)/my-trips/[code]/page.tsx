@@ -12,6 +12,8 @@ import { BookingBadge } from "../../_components/booking-bits";
 import { FeeTable } from "../../_components/fee-table";
 import { CancelForm } from "./cancel-form";
 import { bankTransferDetails } from "@/server/paymentSettingsService";
+import { gatewayReady } from "@/server/gatewayService";
+import { PayOnlineButton } from "../../pay/pay-button";
 
 export default async function MyTrip({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ held?: string; cancelled?: string }> }) {
   const { code } = await params;
@@ -27,7 +29,7 @@ export default async function MyTrip({ params, searchParams }: { params: Promise
   const active = ["HELD", "CONFIRMED", "PAID"].includes(b.status);
   const canCancel = active && b.userId === session.user.id && daysBetween(todayInJakarta(), b.departure.departDate) > 0;
   const quote = canCancel ? quoteFor(b) : null;
-  const bank = await bankTransferDetails();
+  const [bank, online] = await Promise.all([bankTransferDetails(), gatewayReady()]);
   const holdUntil = b.holdExpiresAt.toLocaleString(BCP47[locale], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
   const banner = (msg: string) => <p role="status" className="rounded-xl bg-green-t px-4 py-3 font-semibold text-green-d">{msg}</p>;
   return (
@@ -62,7 +64,8 @@ export default async function MyTrip({ params, searchParams }: { params: Promise
         </ul>
         {active && next && (
           <div className="mt-4 rounded-xl bg-ground p-4 text-[14px]">
-            <b>{t("my.howToPay")}</b>
+            {online && b.userId === session.user.id && <div className="mb-4"><PayOnlineButton code={b.code} kind="trip" label={t("ret.payNow", { amount: rp(next.amount) })} /></div>}
+            <b>{online ? t("ret.orTransfer") : t("my.howToPay")}</b>
             <p className="text-muted">{t("my.howToPayBody", { amount: rp(next.amount), code: b.code, date: fmtDate(next.dueOn, locale) })}</p>
             {bank && <p className="mt-2">{t("pay.toAccount", { bank: bank.bank, number: bank.number, holder: bank.holder })}</p>}
           </div>

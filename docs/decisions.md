@@ -148,5 +148,26 @@ item has a booking. The budget check always counts what is already booked and re
 
 **Next:** take payments through the gateway, then connect real suppliers.
 
+## 13. Online payment through Midtrans and Xendit
+**Decision (2026-11-16):** build both ("both and continue").
+
+**Build:** when Payment settings has a gateway chosen and its keys saved, travellers see **Pay now** on Open Trip instalments and tickets. Bank transfer stays available as the fallback.
+- **Midtrans:** a Snap transaction (`/snap/v1/transactions`), with the expiry set to the remaining seat hold. HTTP notifications go to `/api/payments/midtrans/notify` and are verified with `SHA512(order_id + status_code + gross_amount + server_key)`.
+- **Xendit:** an invoice (`/v2/invoices`, IDR). Callbacks go to `/api/payments/xendit/callback` and are verified with the `x-callback-token`.
+- **Never trust a notification:** after verifying it, the app re-reads the status from the provider (Midtrans `/v2/{order}/status`, Xendit `/v2/invoices/{id}`) before recording anything. The return page `/pay/return` does the same, in case the customer comes back before the notification arrives.
+- **Exactly once:** each attempt is claimed once, so replayed notifications change nothing. The amount must match. The payment is recorded on that instalment or ticket "by Midtrans/Xendit".
+- **Late or mismatched money** (for example a hold that lapsed while the customer paid) is marked **PAID_UNAPPLIED**. It's never silently applied; it's listed on Payment settings for ops to refund or apply by hand, then mark resolved.
+- **Webhook URLs:** Payment settings shows them. Set `APP_URL` to the public site address.
+
+**Verified:** unit tests for signatures, tokens, status mapping and request shapes. An end-to-end test against a local stand-in covers both providers, replays, forged notifications, wrong tokens, late payments and expiry (`e2e/`).
+
+**Still to check against the real sandboxes** (needs keys and network access to the provider hosts):
+1. Paste the webhook URL into the provider dashboard.
+2. Pay a test booking with each provider's simulator.
+3. Confirm the notification arrives and the booking updates.
+4. Confirm the return redirect works.
+
+Then lower the seat hold to about 30 minutes in Billing settings.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.

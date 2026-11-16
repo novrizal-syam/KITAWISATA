@@ -16,6 +16,11 @@ const eslintConfig = [
     rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }] },
   },
   {
+    // e2e/ holds plain Node (CommonJS) scripts run outside the app.
+    files: ["e2e/**/*.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     ignores: [
       "src/generated/**",
       "node_modules/**",

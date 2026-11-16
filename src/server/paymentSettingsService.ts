@@ -3,6 +3,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { open, seal } from "./secretBox";
+import { getOrCreate } from "./singleton";
+import { midtransApiBase } from "./gateways/midtrans";
+import { xenditApiBase } from "./gateways/xendit";
 
 export class PaymentSettingsError extends AppError {}
 
@@ -14,7 +17,7 @@ type Secrets = Partial<Record<string, string>>;
 const hint = (v: string) => (v.length <= 4 ? "••••" : "••••" + v.slice(-4));
 
 export async function paymentSettings() {
-  return db.paymentSetting.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  return getOrCreate(() => db.paymentSetting.findUnique({ where: { id: "default" } }), () => db.paymentSetting.create({ data: { id: "default" } }));
 }
 
 /** Public view for pages: never includes secrets. */
@@ -51,6 +54,12 @@ export function mergeSecrets(stored: Secrets, input: Record<string, unknown>, cl
     else if (typeof input[f] === "string" && input[f]) out[f] = input[f] as string;
   }
   return out;
+}
+
+/** Decrypted gateway keys, for server-side gateway calls only. */
+export async function gatewayConfig() {
+  const s = await paymentSettings();
+  return { provider: s.provider, mode: s.mode, secrets: await storedSecrets() };
 }
 
 async function storedSecrets(): Promise<Secrets> {
@@ -94,7 +103,7 @@ export async function checkGateway(provider: Provider, mode: "SANDBOX" | "PRODUC
   if (!k) return { ok: false, key: "pay.testMissingKey" };
   if (provider === "XENDIT" && (k.startsWith("xnd_development_") ? "SANDBOX" : k.startsWith("xnd_production_") ? "PRODUCTION" : mode) !== mode) return { ok: false, key: "pay.testModeMismatch" };
   if (provider === "MIDTRANS" && (k.startsWith("SB-") ? "SANDBOX" : "PRODUCTION") !== mode) return { ok: false, key: "pay.testModeMismatch" };
-  const url = provider === "MIDTRANS" ? `https://${host}/v2/kitawisata-connection-test/status` : `https://${host}/balance`;
+  const url = provider === "MIDTRANS" ? `${midtransApiBase(mode)}/v2/kitawisata-connection-test/status` : `${xenditApiBase()}/balance`;
   let res: Response;
   try {
     res = await doFetch(url, { headers: { Authorization: "Basic " + Buffer.from(k + ":").toString("base64"), Accept: "application/json" }, signal: AbortSignal.timeout(10_000) });

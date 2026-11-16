@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { getT } from "@/i18n/server";
 import { ticketForViewer, type TicketSearch } from "@/server/ticketService";
 import { bankTransferDetails } from "@/server/paymentSettingsService";
+import { gatewayReady } from "@/server/gatewayService";
+import { PayOnlineButton } from "../../../pay/pay-button";
 import type { StayOffer, TravelOffer } from "@/domain/tickets";
 import { BCP47 } from "@/i18n";
 import { rp } from "@/lib/format";
@@ -15,7 +17,7 @@ export default async function TicketPage({ params, searchParams }: { params: Pro
   const { code } = await params;
   const session = await auth();
   if (!session) redirect(`/login?callbackUrl=/my-trips/tickets/${code}`);
-  const [{ t, locale }, b, bank] = await Promise.all([getT(), ticketForViewer(code, { id: session.user.id, role: session.user.role }), bankTransferDetails()]);
+  const [{ t, locale }, b, bank, online] = await Promise.all([getT(), ticketForViewer(code, { id: session.user.id, role: session.user.role }), bankTransferDetails(), gatewayReady()]);
   if (!b) notFound();
   const offer = b.offer as unknown as TravelOffer | StayOffer;
   const { title, lines } = offerLines(b.search as unknown as TicketSearch, offer, t, locale);
@@ -39,7 +41,8 @@ export default async function TicketPage({ params, searchParams }: { params: Pro
         <PriceLines offer={offer} t={t} />
         {b.status === "AWAITING_PAYMENT" && (
           <div className="mt-4 rounded-xl bg-ground p-4 text-[14px]">
-            <b>{t("my.howToPay")}</b>
+            {online && b.userId === session.user.id && <div className="mb-4"><PayOnlineButton code={b.code} kind="ticket" label={t("ret.payNow", { amount: rp(b.total) })} /></div>}
+            <b>{online ? t("ret.orTransfer") : t("my.howToPay")}</b>
             <p className="text-muted">{t("tk.howToPay", { amount: rp(b.total), code: b.code, until })}</p>
             {bank && <p className="mt-2">{t("pay.toAccount", { bank: bank.bank, number: bank.number, holder: bank.holder })}</p>}
           </div>
