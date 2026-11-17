@@ -1,21 +1,32 @@
 import "server-only";
+import { db } from "@/lib/db";
 import type { TicketKind } from "@/domain/tickets";
+import { open } from "../secretBox";
+import { platformSettings } from "../billingService";
 import { sampleSupplier } from "./sample";
+import { httpSupplier } from "./http";
 import type { Supplier } from "./types";
 
-/** Every supplier the app knows. Add new adapters here (docs/suppliers.md). */
-const SUPPLIERS: Supplier[] = [sampleSupplier];
+const FIELD = { FLIGHT: "flightSupplierId", TRAIN: "trainSupplierId", STAY: "staySupplierId" } as const;
 
-/**
- * The supplier serving a kind: SUPPLIER_FLIGHT / SUPPLIER_TRAIN / SUPPLIER_STAY (a supplier id),
- * defaulting to the sample catalogue.
- */
-export function supplierFor(kind: TicketKind): Supplier {
-  const id = process.env[`SUPPLIER_${kind}`] || "sample";
-  const s = SUPPLIERS.find((x) => x.id === id && x.kinds.includes(kind));
-  if (!s) throw new Error(`No supplier "${id}" for ${kind}`);
-  return s;
+/** Build the adapter for a stored connection (decrypting its API key on the server only). */
+export async function connectionSupplier(id: string): Promise<Supplier | null> {
+  const c = await db.supplierConnection.findUnique({ where: { id } });
+  if (!c) return null;
+  return httpSupplier({ id: c.id, name: c.name, baseUrl: c.baseUrl, apiKey: c.apiKeyEnc ? open(c.apiKeyEnc) : undefined, kinds: c.kinds, canIssue: c.canIssue });
 }
 
-/** True while the kind is served by the sample catalogue (the search page says so). */
-export const isSample = (kind: TicketKind) => supplierFor(kind).id === "sample";
+/** The supplier serving a kind, as chosen on Supplier settings; the sample catalogue when none is chosen. */
+export async function supplierFor(kind: TicketKind): Promise<Supplier> {
+  const id = (await platformSettings())[FIELD[kind]];
+  if (!id) return sampleSupplier;
+  const s = await connectionSupplier(id);
+  return s && s.kinds.includes(kind) ? s : sampleSupplier;
+}
+
+/** The supplier that sold a booking (for issuing). */
+export async function supplierById(id: string): Promise<Supplier | null> {
+  return id === "sample" ? sampleSupplier : connectionSupplier(id);
+}
+
+export const SUPPLIER_FIELD = FIELD;

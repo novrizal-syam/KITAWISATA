@@ -5,8 +5,8 @@ import { getT } from "@/i18n/server";
 import type { MessageKey, T } from "@/i18n";
 import { AIRPORTS, MAX_NIGHTS, MAX_PASSENGERS, STATIONS, STAY_CITIES, type StayOffer, type TravelOffer } from "@/domain/tickets";
 import { addDays, parseDate, toIsoDate, todayInJakarta } from "@/domain/dates";
-import { offersFor, readSearch } from "@/server/ticketService";
-import { isSample } from "@/server/suppliers";
+import { readSearch, searchOffers } from "@/server/ticketService";
+import { supplierFor } from "@/server/suppliers";
 import { fmtDate, rp } from "@/lib/format";
 import { BANNER, KIND_BY_SLUG, searchQuery } from "../kinds";
 
@@ -22,8 +22,9 @@ export default async function TravelSearch({ params, searchParams }: { params: P
   const searched = Boolean(sp.date);
   const values = { ...defaults, ...Object.fromEntries(Object.entries(sp).filter(([, v]) => v)) };
   const { search, error } = readSearch(kind, values, today);
-  const offers = searched && !error ? await offersFor(search) : [];
-  const sample = isSample(kind);
+  const result = searched && !error ? await searchOffers(search) : null;
+  const offers = result?.offers ?? [];
+  const sample = result ? result.supplier.id === "sample" : (await supplierFor(kind)).id === "sample";
   const places = kind === "FLIGHT" ? AIRPORTS.map((a) => [a.code, `${a.city} (${a.code})`]) : STATIONS.map((s) => [s.code, s.name]);
   const placeName = (c?: string) => places.find(([code]) => code === c)?.[1] ?? c;
   const k = kind.toLowerCase() as "flight" | "train" | "stay";
@@ -53,7 +54,8 @@ export default async function TravelSearch({ params, searchParams }: { params: P
       </form>
 
       {searched && error && <p role="alert" className="card p-5 font-semibold text-red-d">{t(`search.${error}`)}</p>}
-      {searched && !error && (
+      {result?.unavailable && <p role="alert" className="card p-5 font-semibold text-red-d">{t("tk.supplierDown")}</p>}
+      {searched && !error && !result?.unavailable && (
         <section className="flex flex-col gap-3">
           <div>
             <p className="eyebrow">{t("tk.payFull")}</p>
@@ -91,11 +93,15 @@ function TravelRow({ o, t, cheapest }: { o: TravelOffer; t: T; cheapest: boolean
 function StayRow({ o, t }: { o: StayOffer; t: T }) {
   return (
     <div className="flex items-center gap-4">
-      <Image src={`/img/${o.image}-sm.jpg`} alt="" width={140} height={96} className="hidden h-24 w-36 rounded-xl object-cover sm:block" />
+      {o.imageUrl
+        // Supplier photos come from the supplier's own host; shown as-is rather than through the image optimiser.
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={o.imageUrl} alt="" width={140} height={96} loading="lazy" className="hidden h-24 w-36 rounded-xl object-cover sm:block" />
+        : <Image src={`/img/${o.image}-sm.jpg`} alt="" width={140} height={96} className="hidden h-24 w-36 rounded-xl object-cover sm:block" />}
       <div className="flex flex-col gap-1">
         <b className="text-[17px]">{o.name}</b>
         <span aria-label={t("tk.stars", { n: o.stars })} className="text-amber">{"★".repeat(o.stars)}</span>
-        <span className="note">{t(`tk.feature.${o.feature}`)} · {t("tk.rooms", { n: o.rooms })}</span>
+        <span className="note">{o.description ?? (o.feature ? t(`tk.feature.${o.feature}`) : "")} · {t("tk.rooms", { n: o.rooms })}</span>
       </div>
     </div>
   );

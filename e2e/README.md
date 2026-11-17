@@ -1,4 +1,4 @@
-# Gateway end-to-end tests
+# End-to-end tests
 
 `gateway.e2e.js` checks online payment for bookings (Midtrans and Xendit) and `invoice-pay.e2e.js` checks
 companies paying invoices, end to end, against `mock-gateway.js`, a local stand-in that
@@ -16,4 +16,19 @@ AUTH_TRUST_HOST=true APP_URL=http://localhost:3000 MIDTRANS_SNAP_BASE=http://loc
 node e2e/gateway.e2e.js server.log /tmp
 # reseed before the next one (OTP resend limit: wait a minute between runs)
 node e2e/invoice-pay.e2e.js server.log
+```
+
+## Supplier settings
+
+`suppliers.e2e.js` runs against `mock-supplier.js`, a stand-in on port 4020 that implements the kitawisata supplier API (`docs/suppliers.md`). It covers:
+- connecting, testing and choosing a supplier
+- a search and booking served by the supplier
+- issuing through it
+- outages, malformed answers, and the in-use guard
+
+```bash
+node e2e/mock-supplier.js &
+AUTH_TRUST_HOST=true APP_URL=http://localhost:3000 pnpm start > server.log 2>&1 &
+# start with no supplier connected
+node e2e/suppliers.e2e.js server.log
 ```

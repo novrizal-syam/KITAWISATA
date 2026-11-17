@@ -17,7 +17,11 @@ export default async function BookTicket({ params, searchParams }: { params: Pro
   const here = `/travel/${slug}/book?${new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][])}`;
   if (!session) redirect(`/login?callbackUrl=${encodeURIComponent(here)}`);
   const { search, error } = readSearch(kind, sp);
-  const offer = error ? null : await repriceOffer(search, sp.offer ?? "");
+  let offer = null, down = false;
+  if (!error) {
+    try { offer = (await repriceOffer(search, sp.offer ?? "")).offer; } catch { down = true; }
+  }
+  if (down) return <main className="mx-auto max-w-lg px-4 py-16"><p role="alert" className="card p-6 font-semibold text-red-d">{(await getT()).t("tk.supplierDown")}</p></main>;
   if (!offer) notFound();
   const [{ t, locale }, me] = await Promise.all([getT(), db.user.findUnique({ where: { id: session.user.id }, select: { name: true, phone: true } })]);
   const { title, lines } = offerLines(search, offer, t, locale);
