@@ -482,14 +482,18 @@ model InvoiceCounter {
 
 /// Platform-wide settings, one row (id "default"), edited by kitawisata ops.
 model PlatformSetting {
-  id              String   @id @default("default")
+  id               String   @id @default("default")
   /// Effective PPN rate on kitawisata's service fee, in basis points (1100 = 11%).
-  ppnRateBps      Int      @default(1100)
+  ppnRateBps       Int      @default(1100)
   /// How long seats stay held for an unpaid Open Trip booking. 24 hours while payments are confirmed
   /// by hand; reduce to about 30 minutes once a payment gateway confirms automatically.
-  seatHoldMinutes Int      @default(1440)
-  updatedAt       DateTime @updatedAt
-  updatedBy       String?
+  seatHoldMinutes  Int      @default(1440)
+  /// Which supplier serves each kind: a SupplierConnection id, or null for the sample catalogue.
+  flightSupplierId String?
+  trainSupplierId  String?
+  staySupplierId   String?
+  updatedAt        DateTime @updatedAt
+  updatedBy        String?
 }
 
 // ---------- Payment provider settings (ops) ----------
@@ -543,6 +547,8 @@ enum TicketStatus {
 /// ops issues the ticket or voucher and records its reference. `offer` is the priced offer as booked.
 model TicketBooking {
   id             String       @id @default(cuid())
+  /// "sample" or a SupplierConnection id: who supplies (and may issue) this booking.
+  supplierId     String       @default("sample")
   code           String       @unique
   kind           TicketKind
   userId         String
@@ -615,4 +621,27 @@ model PaymentAttempt {
   paidAt               DateTime?
 
   @@index([status])
+}
+
+// ---------- Inventory supplier connections (ops) ----------
+
+/// A supplier connected through the kitawisata supplier API (docs/suppliers.md). The API key is stored
+/// encrypted (src/server/secretBox.ts) and never sent to the browser.
+model SupplierConnection {
+  id              String       @id @default(cuid())
+  name            String
+  /// Base URL of the supplier API, e.g. https://supplier.example.com/kitawisata/v1
+  baseUrl         String
+  /// Which kinds this connection can serve.
+  kinds           TicketKind[]
+  apiKeyEnc       String?
+  apiKeyHint      String?
+  /// Whether the supplier issues tickets itself (POST /issue).
+  canIssue        Boolean      @default(false)
+  lastTestAt      DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  updatedBy       String?
 }

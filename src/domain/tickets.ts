@@ -36,7 +36,11 @@ export interface StayOffer {
   name: string;
   stars: number;
   image: string;
-  feature: "seaView" | "privateVilla" | "family" | "central";
+  feature?: "seaView" | "privateVilla" | "family" | "central";
+  /** Free text from a real supplier (shown instead of the sample feature label). */
+  description?: string;
+  /** Absolute photo URL from a real supplier (shown instead of a local sample photo). */
+  imageUrl?: string;
   ratePerNight: number;
   rooms: number;
   nights: number;

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { getT } from "@/i18n/server";
 import { tMaybe } from "@/i18n";
-import { TicketError, cannotIssue, issueInput, issueTicket, markTicketRefunded, recordTicketPayment } from "@/server/ticketService";
+import { TicketError, cannotIssue, issueInput, issueTicket, issueViaSupplier, markTicketRefunded, recordTicketPayment } from "@/server/ticketService";
 
 export type TicketOpsState = { error?: string };
 
@@ -20,7 +20,8 @@ export async function ticketOpsAction(_prev: TicketOpsState, form: FormData): Pr
       const parsed = issueInput.safeParse({ ref: form.get("ref") });
       if (!parsed.success) return { error: tMaybe(t, parsed.error.issues[0].message) };
       await issueTicket(session.user.id, id, parsed.data.ref);
-    } else if (op === "fail") await cannotIssue(session.user.id, id);
+    } else if (op === "supplier") await issueViaSupplier(session.user.id, id);
+    else if (op === "fail") await cannotIssue(session.user.id, id);
     else if (op === "refunded") await markTicketRefunded(session.user.id, id);
     else return { error: t("v.invalid") };
   } catch (e) {

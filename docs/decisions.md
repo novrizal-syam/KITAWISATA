@@ -181,5 +181,17 @@ A second payment for an invoice that's already paid is kept as **needs review**,
 
 **To decide:** which suppliers kitawisata contracts with for flights, trains and stays. Each needs an agreement, sandbox keys and network access before its adapter can be built and tested.
 
+## 16. Suppliers are a setting
+**Decision (2026-11-17):** "make it like a setting that can connect later".
+
+**Build:**
+- Ops connects suppliers on **Supplier settings**: a name, an https API address, an encrypted write-only key, the kinds served, and whether it can issue.
+- Ops tests the connection, then chooses the sample catalogue or a supplier for each of flights, trains and stays. No deploy is needed.
+- Real suppliers speak one documented JSON API (`docs/suppliers.md`), and every answer is checked against a schema.
+- Bookings record their supplier, and ops can **Issue via {supplier}** once paid.
+- If the supplier is down or sends bad data, travellers see a friendly message and nothing is booked at an unconfirmed price.
+- The `SUPPLIER_*` environment variables from §15 are replaced by this page.
+- End-to-end test: `e2e/suppliers.e2e.js`.
+
 ## Not yet decided
 - The extra data models proposed in the kickoff. Phase 2 includes `PolicyException`, which SPPD 044's approved hotel exception needs. `WebhookEvent` and the payment models wait for the payments phase.
